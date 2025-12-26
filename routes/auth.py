@@ -131,33 +131,41 @@ def forgot_password():
 
 @auth_bp.route('/reset-password', methods=['GET', 'POST'])
 def reset_password():
-    # Capture code from URL (PKCE Flow)
-    code = request.args.get('code')
-    print(f"DEBUG: Reset password GET. Code in URL: {'Present' if code else 'Missing'}")
+    # Capture code from URL (PKCE Flow or Token Hash)
+    code = request.args.get('code') or request.args.get('token_hash')
+    print(f"DEBUG: Reset password GET. Code/Token in URL: {'Present' if code else 'Missing'}", flush=True)
     
     if request.method == 'POST':
         new_password = request.form.get('password')
-        form_code = request.form.get('code') or request.args.get('code')
-        print(f"DEBUG: Reset password POST. Code: {'Present' if form_code else 'Missing'}")
+        form_code = request.form.get('code') or request.args.get('code') or request.args.get('token_hash')
+        print(f"DEBUG: Reset password POST. Code/Token: {'Present' if form_code else 'Missing'}", flush=True)
         
         if not form_code:
             flash('Error de seguridad: No se detectó el código de validación. Por favor, usa el enlace del correo nuevamente.', 'error')
             return render_template('reset_password.html', code=None)
             
         try:
-            # 1. Exchange token for session using verify_otp (most robust for recovery links)
-            print("DEBUG: Verifying OTP/Token...")
-            # We try verify_otp with recovery type. 
-            # This usually works with token_hash or the code from the link.
-            supabase.auth.verify_otp({"token_hash": form_code, "type": "recovery"})
+            # 1. Exchange token for session
+            print("DEBUG: Verifying OTP/Token...", flush=True)
+            
+            # verify_otp works for both token_hash (standard) and type recovery
+            # If the code is a short PKCE code, verify_otp might fail, 
+            # but usually it's a token_hash nowadays in Supabase default templates.
+            try:
+                supabase.auth.verify_otp({"token_hash": form_code, "type": "recovery"})
+            except Exception as otp_err:
+                print(f"DEBUG: verify_otp failed, trying exchange_code_for_session: {str(otp_err)}", flush=True)
+                # Fallback to PKCE exchange
+                supabase.auth.exchange_code_for_session({"auth_code": form_code})
             
             # 2. Update the password
+            print(f"DEBUG: Updating user password...", flush=True)
             supabase.auth.update_user({"password": new_password})
             
             flash('Contraseña actualizada exitosamente. Ya puedes iniciar sesión.', 'success')
             return redirect(url_for('auth.login'))
         except Exception as e:
-            print(f"DEBUG: Error in reset_password: {str(e)}")
+            print(f"DEBUG: Error in reset_password: {str(e)}", flush=True)
             flash(f'Error al actualizar contraseña: {str(e)}', 'error')
             return render_template('reset_password.html', code=form_code)
 
