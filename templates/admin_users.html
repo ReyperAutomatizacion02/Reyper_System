@@ -176,7 +176,7 @@
                                 {% endif %}
                             </td>
                             <td>
-                                <button onclick='openEditModal({{ p|tojson }})' class="btn-secondary"
+                                <button type="button" class="btn-secondary edit-btn" data-user='{{ p|tojson }}'
                                     style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">
                                     <i class="ph ph-pencil-simple"></i> Editar
                                 </button>
@@ -230,6 +230,13 @@
     </dialog>
 
     <script>
+        document.querySelectorAll('.edit-btn').forEach(button => {
+            button.addEventListener('click', function () {
+                const user = JSON.parse(this.dataset.user);
+                openEditModal(user);
+            });
+        });
+
         function openEditModal(user) {
             const modal = document.getElementById('editModal');
             document.getElementById('modal_user_id').value = user.id;

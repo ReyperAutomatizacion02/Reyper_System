@@ -54,32 +54,31 @@
         </div>
     </main>
 
+    <!-- Flash Messages Data -->
+    <div id="flash-messages" data-messages='{{ get_flashed_messages(with_categories=true) | tojson | safe }}'></div>
+
     <script>
         // 1. Handle Flash Messages from Flask
-        {% with messages = get_flashed_messages(with_categories = true) %}
-        {% if messages %}
-        const messages = [
-            {% for category, message in messages %}
-        { category: "{{ category }}", message: "{{ message }}" },
-        {% endfor %}
-            ];
-
-        messages.forEach(msg => {
-            Swal.fire({
-                icon: msg.category === 'error' ? 'error' : 'success',
-                title: msg.category === 'error' ? 'Error' : 'Éxito',
-                text: msg.message,
-                toast: true,
-                position: 'top-end',
-                showConfirmButton: false,
-                timer: 4000,
-                timerProgressBar: true,
-                background: '#1a1a20',
-                color: '#fff'
+        const flashData = document.getElementById('flash-messages').dataset.messages;
+        const flashMessages = flashData ? JSON.parse(flashData) : [];
+        if (flashMessages && flashMessages.length > 0) {
+            flashMessages.forEach(msg => {
+                const category = msg[0];
+                const message = msg[1];
+                Swal.fire({
+                    icon: category === 'error' ? 'error' : 'success',
+                    title: category === 'error' ? 'Error' : 'Éxito',
+                    text: message,
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 4000,
+                    timerProgressBar: true,
+                    background: '#1a1a20',
+                    color: '#fff'
+                });
             });
-        });
-        {% endif %}
-        {% endwith %}
+        }
 
         // 2. Handle Form Submission Loading State
         const form = document.getElementById('loginForm');
