@@ -131,22 +131,25 @@ def forgot_password():
 
 @auth_bp.route('/reset-password', methods=['GET', 'POST'])
 def reset_password():
-    # El GET es cuando el usuario llega desde el correo.
-    # Supabase típicamente añade el token/sesión en la URL o fragmento.
-    # En un flujo de servidor (Flask), debemos capturar el 'code' si usamos PKCE 
-    # o simplemente confiar en que Supabase maneja la sesión si se hace del lado del cliente.
-    # Pero aquí estamos en el lado del servidor.
+    # Capture code from URL (PKCE Flow)
+    code = request.args.get('code')
     
     if request.method == 'POST':
         new_password = request.form.get('password')
+        form_code = request.form.get('code')
+        
         try:
-            # Para actualizar, el usuario debe estar "autenticado" en la sesión de Supabase
-            # Si el enlace del correo funcionó, Supabase suele establecer la sesión.
+            # 1. Exchange code for session if provided (ensures server is authorized)
+            if form_code:
+                supabase.auth.exchange_code_for_session({"auth_code": form_code})
+            
+            # 2. Update the password
             supabase.auth.update_user({"password": new_password})
+            
             flash('Contraseña actualizada exitosamente. Ya puedes iniciar sesión.', 'success')
             return redirect(url_for('auth.login'))
         except Exception as e:
             flash(f'Error al actualizar contraseña: {str(e)}', 'error')
-            return render_template('reset_password.html')
+            return render_template('reset_password.html', code=form_code)
 
-    return render_template('reset_password.html')
+    return render_template('reset_password.html', code=code)
