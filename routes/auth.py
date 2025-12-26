@@ -133,22 +133,30 @@ def forgot_password():
 def reset_password():
     # Capture code from URL (PKCE Flow)
     code = request.args.get('code')
+    print(f"DEBUG: Reset password GET. Code in URL: {'Present' if code else 'Missing'}")
     
     if request.method == 'POST':
         new_password = request.form.get('password')
         form_code = request.form.get('code')
+        print(f"DEBUG: Reset password POST. Code in form: {'Present' if form_code else 'Missing'}")
         
+        if not form_code:
+            flash('Error: Enlace de recuperación inválido o expirado.', 'error')
+            return render_template('reset_password.html', code=None)
+            
         try:
-            # 1. Exchange code for session if provided (ensures server is authorized)
-            if form_code:
-                supabase.auth.exchange_code_for_session({"auth_code": form_code})
+            # 1. Exchange code for session
+            print("DEBUG: Exchanging code for session...")
+            auth_res = supabase.auth.exchange_code_for_session({"auth_code": form_code})
             
             # 2. Update the password
+            print(f"DEBUG: Updating user password. User: {auth_res.user.email if auth_res.user else 'Unknown'}")
             supabase.auth.update_user({"password": new_password})
             
             flash('Contraseña actualizada exitosamente. Ya puedes iniciar sesión.', 'success')
             return redirect(url_for('auth.login'))
         except Exception as e:
+            print(f"DEBUG: Error in reset_password: {str(e)}")
             flash(f'Error al actualizar contraseña: {str(e)}', 'error')
             return render_template('reset_password.html', code=form_code)
 
