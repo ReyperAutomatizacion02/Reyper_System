@@ -146,17 +146,24 @@ def reset_password():
             
         try:
             # 1. Exchange token for session
-            print("DEBUG: Verifying OTP/Token...", flush=True)
+            print("DEBUG: Authenticating for password reset...", flush=True)
             
-            # verify_otp works for both token_hash (standard) and type recovery
-            # If the code is a short PKCE code, verify_otp might fail, 
-            # but usually it's a token_hash nowadays in Supabase default templates.
-            try:
-                supabase.auth.verify_otp({"token_hash": form_code, "type": "recovery"})
-            except Exception as otp_err:
-                print(f"DEBUG: verify_otp failed, trying exchange_code_for_session: {str(otp_err)}", flush=True)
-                # Fallback to PKCE exchange
-                supabase.auth.exchange_code_for_session({"auth_code": form_code})
+            # Check if we have access_token directly (Implicit flow)
+            access_token = request.args.get('access_token') or request.form.get('access_token')
+            refresh_token = request.args.get('refresh_token') or request.form.get('refresh_token')
+            
+            if access_token and refresh_token:
+                print("DEBUG: Using manual set_session (Implicit Flow)", flush=True)
+                supabase.auth.set_session(access_token, refresh_token)
+            else:
+                # Try verify_otp or exchange_code
+                print("DEBUG: Using token/code exchange", flush=True)
+                try:
+                    supabase.auth.verify_otp({"token_hash": form_code, "type": "recovery"})
+                except Exception as otp_err:
+                    print(f"DEBUG: verify_otp failed: {str(otp_err)}", flush=True)
+                    # Last resort: exchange_code
+                    supabase.auth.exchange_code_for_session({"auth_code": form_code})
             
             # 2. Update the password
             print(f"DEBUG: Updating user password...", flush=True)
