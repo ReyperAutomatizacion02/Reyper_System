@@ -3,6 +3,7 @@ from flask_login import login_user, logout_user, login_required
 from extensions import supabase
 from models import User
 import re
+import os
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -116,8 +117,11 @@ def forgot_password():
     if request.method == 'POST':
         email = request.form.get('email')
         try:
-            # Supabase sends the email with a redirect link
-            redirect_url = url_for('auth.reset_password', _external=True)
+            # Use SITE_URL from env or fallback to local
+            site_url = os.getenv('SITE_URL', url_for('main.index', _external=True)).rstrip('/')
+            reset_path = url_for('auth.reset_password')
+            redirect_url = f"{site_url}{reset_path}"
+            
             supabase.auth.reset_password_for_email(email, {"redirect_to": redirect_url})
             flash('Si el correo está registrado, recibirás un enlace para restablecer tu contraseña.', 'success')
             return redirect(url_for('auth.login'))
