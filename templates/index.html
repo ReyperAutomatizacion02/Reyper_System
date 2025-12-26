@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoIntelli | Gestión Avanzada de Notion</title>
+    <meta name="description"
+        content="Plataforma de administración inteligente para bases de datos de Notion. Agiliza tus procesos con AutoIntelli.">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Styles -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <!-- Icons (Phosphor Icons for a clean look) -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+</head>
+
+<body>
+    <header>
+        <div class="container">
+            <nav>
+                <a href="#" class="logo">
+                    <i class="ph-fill ph-database"></i> AutoIntelli
+                </a>
+                <div class="nav-links">
+                    <a href="#features">Características</a>
+                    <a href="#about">Acerca de</a>
+                    <a href="#pricing">Precios</a>
+                    <a href="{{ url_for('login') }}" class="btn-primary">Acceder</a>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <section class="hero">
+            <div class="container">
+                <h1>Administra tu Notion a <span class="gradient-text">Velocidad Luz</span></h1>
+                <p>AutoIntelli transforma tus bases de datos de Notion en potentes paneles de administración. Simplifica
+                    flujos de trabajo y visualiza tus datos como nunca antes.</p>
+                <div class="hero-buttons">
+                    <a href="#" class="btn-primary">Comenzar Gratis</a>
+                    <a href="#features" class="btn-secondary">Más Información</a>
+                </div>
+            </div>
+        </section>
+
+        <section id="features" class="features">
+            <div class="container">
+                <div class="section-header">
+                    <h2>Potencia sin límites</h2>
+                    <p class="section-desc">Todo lo que necesitas para escalar tus operaciones en Notion.</p>
+                </div>
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="ph ph-lightning"></i>
+                        </div>
+                        <h3>Rápido y Ágil</h3>
+                        <p>Olvídate de las cargas lentas. Nuestra interfaz optimizada permite gestionar miles de
+                            registros en segundos.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="ph ph-eye"></i>
+                        </div>
+                        <h3>Vistas Admin Pro</h3>
+                        <p>Tablas avanzadas, filtros complejos y edición masiva que Notion nativo no te permite hacer
+                            fácilmente.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="ph ph-plugs-connected"></i>
+                        </div>
+                        <h3>Sincronización Real</h3>
+                        <p>Los cambios se reflejan al instante en tu espacio de trabajo de Notion. Sin conflictos, sin
+                            esperas.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 AutoIntelli. Todos los derechos reservados.</p>
+        </div>
+    </footer>
+</body>
+
+</html>
