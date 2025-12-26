@@ -8,6 +8,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         .quotation-card {
             background: rgba(255, 255, 255, 0.02);
@@ -175,53 +177,20 @@
             display: flex;
             gap: 1rem;
         }
-
-        /* Loading Overlay */
-        #loadingOverlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            z-index: 1000;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
-        }
-
-        .spinner {
-            width: 40px;
-            height: 40px;
-            border: 4px solid rgba(255, 255, 255, 0.1);
-            border-left-color: var(--accent-primary);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-bottom: 1rem;
-        }
-
-        @keyframes spin {
-            100% {
-                transform: rotate(360deg);
-            }
-        }
     </style>
 </head>
 
 <body style="background-image: none; background-color: var(--bg-color);">
-    <div id="loadingOverlay">
-        <div class="spinner"></div>
-        <div id="loadingText" style="color: white; font-weight: 500;">Procesando cotización...</div>
-    </div>
 
     <div class="dashboard-layout">
+        <div class="sidebar-overlay" id="sidebar-overlay"></div>
         <!-- Sidebar -->
-        <aside class="sidebar">
+        <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <a href="{{ url_for('dashboard') }}" class="logo" style="font-size: 1.2rem;">
                     <i class="ph-fill ph-database"></i> AutoIntelli
                 </a>
+                <i class="ph ph-x sidebar-close" id="sidebar-close" style="display:none;"></i>
             </div>
 
             <ul class="sidebar-menu">
@@ -262,6 +231,9 @@
         <main class="main-content">
             <!-- Top Bar with User Info -->
             <div class="top-bar" style="justify-content: space-between;">
+                <button class="mobile-menu-toggle" id="dashboard-toggle">
+                    <i class="ph ph-list"></i>
+                </button>
                 <h1>Nueva Cotización</h1>
 
                 <div class="user-info"
@@ -411,13 +383,32 @@
                 </div>
 
                 <div style="text-align: right; gap: 1rem; display: flex; justify-content: flex-end;">
-                    <button type="submit" class="btn-primary">
+                    <button type="submit" class="btn-primary" id="submitBtn">
                         <i class="ph ph-paper-plane-right"></i> Generar y Enviar
                     </button>
                 </div>
             </form>
         </main>
     </div>
+
+    <!-- Dashboard Sidebar Script (Mobile) -->
+    <script>
+        const sidebar = document.getElementById('sidebar');
+        const dashToggle = document.getElementById('dashboard-toggle');
+        const closeBtn = document.getElementById('sidebar-close');
+        const overlay = document.getElementById('sidebar-overlay');
+
+        function toggleSidebar() {
+            if (sidebar) {
+                sidebar.classList.toggle('active');
+                if (overlay) overlay.classList.toggle('active');
+            }
+        }
+
+        if (dashToggle) dashToggle.addEventListener('click', toggleSidebar);
+        if (closeBtn) closeBtn.addEventListener('click', toggleSidebar);
+        if (overlay) overlay.addEventListener('click', toggleSidebar);
+    </script>
 
     <script>
         // Set today's date
@@ -491,17 +482,48 @@
             addRow();
         }
 
-        // --- SUBMIT LOGIC ---
+        // --- SUBMIT LOGIC WITH SWEETALERT2 ---
         document.getElementById('quotationForm').addEventListener('submit', async function (e) {
             e.preventDefault();
 
-            const loadingOverlay = document.getElementById('loadingOverlay');
-            const loadingText = document.getElementById('loadingText');
-            loadingOverlay.style.display = 'flex';
-            loadingText.textContent = "Recopilando datos...";
+            // 1. Confirm First
+            const confirmResult = await Swal.fire({
+                title: '¿Generar Cotización?',
+                text: "Se enviará la información para ser procesada.",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#DD2122',
+                cancelButtonColor: '#6D6E70',
+                confirmButtonText: 'Sí, enviar',
+                cancelButtonText: 'Cancelar',
+                background: '#1a1a20',
+                color: '#fff'
+            });
+
+            if (!confirmResult.isConfirmed) return;
+
+            // 2. Loading State
+            const submitBtn = document.getElementById('submitBtn');
+            const originalBtnText = submitBtn.innerHTML;
+
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="ph ph-spinner ph-spin"></i> Enviando...';
+
+            // Show Loading Toast
+            Swal.fire({
+                title: 'Procesando...',
+                html: 'Enviando datos a n8n',
+                timerProgressBar: true,
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                },
+                background: '#1a1a20',
+                color: '#fff'
+            });
 
             try {
-                // 1. Collect Header Data
+                // Collect Header Data
                 const headerData = {
                     cotizado_como: document.getElementById('cotizadoComo').value,
                     no_requisicion: document.getElementById('noRequisicion').value,
@@ -517,15 +539,15 @@
                     vigencia: document.getElementById('vigencia').value
                 };
 
-                // 2. Collect Items
+                // Collect Items
                 const rows = document.querySelectorAll('#itemsTable tbody tr');
                 const items = [];
                 rows.forEach((row, index) => {
                     const desc = row.querySelector('.desc-input').value;
                     const qty = parseFloat(row.querySelector('.qty-input').value) || 0;
                     const price = parseFloat(row.querySelector('.price-input').value) || 0;
-
-                    if (desc || price > 0) { // Solo añadir si tiene contenido
+                    // Solo añadir si tiene contenido y precio > 0 (o qty > 0)
+                    if (desc && (price > 0 || qty > 0)) {
                         items.push({
                             lot: index + 1,
                             descripcion: desc,
@@ -537,10 +559,14 @@
                     }
                 });
 
-                // 3. Collect Totals
+                if (items.length === 0) {
+                    throw new Error("Debes agregar al menos una partida válida (con descripción).");
+                }
+
+                // Collect Totals
                 const totals = calculateTotals();
 
-                // 4. Construct Payload
+                // Construct Payload
                 const payload = {
                     header: headerData,
                     items: items,
@@ -551,9 +577,7 @@
                     }
                 };
 
-                // 5. Send to Backend
-                loadingText.textContent = "Enviando a n8n...";
-
+                // Send to Backend
                 const response = await fetch('/api/quotation/submit', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -563,22 +587,40 @@
                 const result = await response.json();
 
                 if (response.ok) {
-                    loadingText.textContent = "¡Enviado con éxito!";
-                    setTimeout(() => {
-                        loadingOverlay.style.display = 'none';
-                        alert('Cotización enviada correctamente para procesamiento.');
-                        // Opcional: Reiniciar formulario o redirigir
-                    }, 1000);
+                    await Swal.fire({
+                        title: '¡Enviado!',
+                        text: 'La cotización ha sido enviada exitosamente.',
+                        icon: 'success',
+                        confirmButtonColor: '#DD2122',
+                        background: '#1a1a20',
+                        color: '#fff'
+                    });
+
+                    // Reset or Redirect? For now, clean reset
+                    // window.location.reload(); 
                 } else {
                     throw new Error(result.message || 'Error desconocido');
                 }
 
             } catch (error) {
-                loadingOverlay.style.display = 'none';
-                alert('Error al enviar: ' + error.message);
+                Swal.fire({
+                    title: 'Error',
+                    text: error.message,
+                    icon: 'error',
+                    confirmButtonColor: '#DD2122',
+                    background: '#1a1a20',
+                    color: '#fff'
+                });
+            } finally {
+                // Restore Button
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalBtnText;
             }
         });
     </script>
+</body>
+
+</html>
 </body>
 
 </html>

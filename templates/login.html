@@ -10,6 +10,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 
 <body>
@@ -31,20 +32,7 @@
                     <p style="color: var(--text-secondary);">Accede a tu panel de control</p>
                 </div>
 
-                <!-- Flash Messages -->
-                {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                <div class="flash-messages">
-                    {% for category, message in messages %}
-                    <div class="flash-message {{ category }}">
-                        {{ message }}
-                    </div>
-                    {% endfor %}
-                </div>
-                {% endif %}
-                {% endwith %}
-
-                <form method="POST" action="{{ url_for('login') }}">
+                <form method="POST" action="{{ url_for('login') }}" id="loginForm">
                     <div class="form-group">
                         <label for="email">Correo Electrónico</label>
                         <input type="email" id="email" name="email" class="form-input" placeholder="ejemplo@empresa.com"
@@ -55,7 +43,8 @@
                         <input type="password" id="password" name="password" class="form-input" placeholder="••••••••"
                             required>
                     </div>
-                    <button type="submit" class="btn-primary" style="width: 100%;">Ingresar</button>
+                    <button type="submit" class="btn-primary" style="width: 100%;" id="submitBtn">Ingresar</button>
+                    <!-- Spinner Hidden by Default -->
                 </form>
 
                 <div class="auth-footer">
@@ -64,6 +53,55 @@
             </div>
         </div>
     </main>
+
+    <script>
+        // 1. Handle Flash Messages from Flask
+        {% with messages = get_flashed_messages(with_categories = true) %}
+        {% if messages %}
+        const messages = [
+            {% for category, message in messages %}
+        { category: "{{ category }}", message: "{{ message }}" },
+        {% endfor %}
+            ];
+
+        messages.forEach(msg => {
+            Swal.fire({
+                icon: msg.category === 'error' ? 'error' : 'success',
+                title: msg.category === 'error' ? 'Error' : 'Éxito',
+                text: msg.message,
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 4000,
+                timerProgressBar: true,
+                background: '#1a1a20',
+                color: '#fff'
+            });
+        });
+        {% endif %}
+        {% endwith %}
+
+        // 2. Handle Form Submission Loading State
+        const form = document.getElementById('loginForm');
+        const btn = document.getElementById('submitBtn');
+
+        if (form) {
+            form.addEventListener('submit', function () {
+                // Prevent double submit relies on browser behavior, 
+                // but visual feedback is key.
+                const originalText = btn.innerText;
+                btn.style.width = getComputedStyle(btn).width; // Keep width
+                btn.innerHTML = '<i class="ph ph-spinner ph-spin" style="font-size: 1.2rem;"></i>';
+                btn.style.opacity = '0.7';
+                btn.style.cursor = 'not-allowed';
+                // We don't disable immediately to allow form data submission, 
+                // or we rely on the fact that submit happens instantly. 
+                // A safer way for pure HTML forms is just visual change or:
+                // btn.disabled = true; // This prevents submission if done before event propagates? 
+                // Actually for standard POST, we just look pretty until page unloads.
+            });
+        }
+    </script>
 </body>
 
 </html>

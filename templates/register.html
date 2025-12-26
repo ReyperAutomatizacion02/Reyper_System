@@ -10,6 +10,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 
 <body>
@@ -30,19 +31,6 @@
                     <h2>Crea tu cuenta</h2>
                     <p style="color: var(--text-secondary);">Comienza a gestionar tu Notion</p>
                 </div>
-
-                <!-- Flash Messages -->
-                {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                <div class="flash-messages">
-                    {% for category, message in messages %}
-                    <div class="flash-message {{ category }}">
-                        {{ message }}
-                    </div>
-                    {% endfor %}
-                </div>
-                {% endif %}
-                {% endwith %}
 
                 <form method="POST" action="{{ url_for('register') }}" id="registerForm">
                     <div class="form-group">
@@ -93,10 +81,37 @@
                 </form>
 
                 <script>
+                    // 1. Flash Messages
+                    {% with messages = get_flashed_messages(with_categories = true) %}
+                    {% if messages %}
+                    const messages = [
+                        {% for category, message in messages %}
+                    { category: "{{ category }}", message: "{{ message }}" },
+                    {% endfor %}
+                        ];
+
+                    messages.forEach(msg => {
+                        Swal.fire({
+                            icon: msg.category === 'error' ? 'error' : 'success',
+                            title: msg.category === 'error' ? 'Error' : 'Éxito',
+                            text: msg.message,
+                            toast: true,
+                            position: 'top-end',
+                            showConfirmButton: false,
+                            timer: 4000,
+                            timerProgressBar: true,
+                            background: '#1a1a20',
+                            color: '#fff'
+                        });
+                    });
+                    {% endif %}
+                    {% endwith %}
+
                     const passwordInput = document.getElementById('password');
                     const confirmInput = document.getElementById('confirm_password');
                     const submitBtn = document.getElementById('submitBtn');
                     const matchMessage = document.getElementById('match-message');
+                    const form = document.getElementById('registerForm');
 
                     const reqs = {
                         length: { regex: /.{10,}/, element: document.getElementById('req-length') },
@@ -160,6 +175,14 @@
                             submitBtn.style.cursor = 'not-allowed';
                         }
                     }
+
+                    // Loading State on valid submit
+                    form.addEventListener('submit', function () {
+                        const originalText = submitBtn.innerText;
+                        submitBtn.style.width = getComputedStyle(submitBtn).width;
+                        submitBtn.innerHTML = '<i class="ph ph-spinner ph-spin" style="font-size: 1.2rem;"></i>';
+                        submitBtn.style.opacity = '0.7';
+                    });
 
                     passwordInput.addEventListener('input', updateState);
                     confirmInput.addEventListener('input', updateState);
