@@ -133,12 +133,10 @@ def forgot_password():
 def reset_password():
     # Capture code from URL (PKCE Flow or Token Hash)
     code = request.args.get('code') or request.args.get('token_hash')
-    print(f"DEBUG: Reset password GET. Code/Token in URL: {'Present' if code else 'Missing'}", flush=True)
     
     if request.method == 'POST':
         new_password = request.form.get('password')
         form_code = request.form.get('code') or request.args.get('code') or request.args.get('token_hash')
-        print(f"DEBUG: Reset password POST. Code/Token: {'Present' if form_code else 'Missing'}", flush=True)
         
         if not form_code:
             flash('Error de seguridad: No se detectó el código de validación. Por favor, usa el enlace del correo nuevamente.', 'error')
@@ -146,33 +144,26 @@ def reset_password():
             
         try:
             # 1. Exchange token for session
-            print("DEBUG: Authenticating for password reset...", flush=True)
             
             # Check if we have access_token directly (Implicit flow)
             access_token = request.args.get('access_token') or request.form.get('access_token')
             refresh_token = request.args.get('refresh_token') or request.form.get('refresh_token')
             
             if access_token and refresh_token:
-                print("DEBUG: Using manual set_session (Implicit Flow)", flush=True)
                 supabase.auth.set_session(access_token, refresh_token)
             else:
-                # Try verify_otp or exchange_code
-                print("DEBUG: Using token/code exchange", flush=True)
                 try:
                     supabase.auth.verify_otp({"token_hash": form_code, "type": "recovery"})
-                except Exception as otp_err:
-                    print(f"DEBUG: verify_otp failed: {str(otp_err)}", flush=True)
+                except Exception:
                     # Last resort: exchange_code
                     supabase.auth.exchange_code_for_session({"auth_code": form_code})
             
             # 2. Update the password
-            print(f"DEBUG: Updating user password...", flush=True)
             supabase.auth.update_user({"password": new_password})
             
             flash('Contraseña actualizada exitosamente. Ya puedes iniciar sesión.', 'success')
             return redirect(url_for('auth.login'))
         except Exception as e:
-            print(f"DEBUG: Error in reset_password: {str(e)}", flush=True)
             flash(f'Error al actualizar contraseña: {str(e)}', 'error')
             return render_template('reset_password.html', code=form_code)
 
