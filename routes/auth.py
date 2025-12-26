@@ -145,11 +145,11 @@ def reset_password():
             return render_template('reset_password.html', code=None)
             
         try:
-            # 1. Exchange code for session
-            print("DEBUG: Exchanging code for session...")
-            # If the code looks like a JWT (access_token), we might need set_session instead
-            # but usually Supabase 'code' is short.
-            supabase.auth.exchange_code_for_session({"auth_code": form_code})
+            # 1. Exchange token for session using verify_otp (most robust for recovery links)
+            print("DEBUG: Verifying OTP/Token...")
+            # We try verify_otp with recovery type. 
+            # This usually works with token_hash or the code from the link.
+            supabase.auth.verify_otp({"token_hash": form_code, "type": "recovery"})
             
             # 2. Update the password
             supabase.auth.update_user({"password": new_password})
