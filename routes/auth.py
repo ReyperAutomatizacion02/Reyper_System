@@ -137,20 +137,21 @@ def reset_password():
     
     if request.method == 'POST':
         new_password = request.form.get('password')
-        form_code = request.form.get('code')
-        print(f"DEBUG: Reset password POST. Code in form: {'Present' if form_code else 'Missing'}")
+        form_code = request.form.get('code') or request.args.get('code')
+        print(f"DEBUG: Reset password POST. Code: {'Present' if form_code else 'Missing'}")
         
         if not form_code:
-            flash('Error: Enlace de recuperación inválido o expirado.', 'error')
+            flash('Error de seguridad: No se detectó el código de validación. Por favor, usa el enlace del correo nuevamente.', 'error')
             return render_template('reset_password.html', code=None)
             
         try:
             # 1. Exchange code for session
             print("DEBUG: Exchanging code for session...")
-            auth_res = supabase.auth.exchange_code_for_session({"auth_code": form_code})
+            # If the code looks like a JWT (access_token), we might need set_session instead
+            # but usually Supabase 'code' is short.
+            supabase.auth.exchange_code_for_session({"auth_code": form_code})
             
             # 2. Update the password
-            print(f"DEBUG: Updating user password. User: {auth_res.user.email if auth_res.user else 'Unknown'}")
             supabase.auth.update_user({"password": new_password})
             
             flash('Contraseña actualizada exitosamente. Ya puedes iniciar sesión.', 'success')
