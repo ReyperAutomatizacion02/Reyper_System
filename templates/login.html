@@ -17,7 +17,7 @@
     <header>
         <div class="container">
             <nav>
-                <a href="{{ url_for('index') }}" class="logo">
+                <a href="{{ url_for('main.index') }}" class="logo">
                     <i class="ph-fill ph-database"></i> AutoIntelli
                 </a>
             </nav>
@@ -32,7 +32,7 @@
                     <p style="color: var(--text-secondary);">Accede a tu panel de control</p>
                 </div>
 
-                <form method="POST" action="{{ url_for('login') }}" id="loginForm">
+                <form method="POST" action="{{ url_for('auth.login') }}" id="loginForm">
                     <div class="form-group">
                         <label for="email">Correo Electrónico</label>
                         <input type="email" id="email" name="email" class="form-input" placeholder="ejemplo@empresa.com"
@@ -48,7 +48,7 @@
                 </form>
 
                 <div class="auth-footer">
-                    <p>¿No tienes una cuenta? <a href="{{ url_for('register') }}">Regístrate gratis</a></p>
+                    <p>¿No tienes una cuenta? <a href="{{ url_for('auth.register') }}">Regístrate gratis</a></p>
                 </div>
             </div>
         </div>

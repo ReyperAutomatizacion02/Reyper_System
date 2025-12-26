@@ -17,7 +17,7 @@
     <header>
         <div class="container">
             <nav>
-                <a href="{{ url_for('index') }}" class="logo">
+                <a href="{{ url_for('main.index') }}" class="logo">
                     <i class="ph-fill ph-database"></i> AutoIntelli
                 </a>
             </nav>
@@ -32,7 +32,7 @@
                     <p style="color: var(--text-secondary);">Comienza a gestionar tu Notion</p>
                 </div>
 
-                <form method="POST" action="{{ url_for('register') }}" id="registerForm">
+                <form method="POST" action="{{ url_for('auth.register') }}" id="registerForm">
                     <div class="form-group">
                         <label for="full_name">Nombre Completo</label>
                         <input type="text" id="full_name" name="full_name" class="form-input" placeholder="Juan Pérez"
@@ -189,7 +189,7 @@
                 </script>
 
                 <div class="auth-footer">
-                    <p>¿Ya tienes cuenta? <a href="{{ url_for('login') }}">Inicia sesión</a></p>
+                    <p>¿Ya tienes cuenta? <a href="{{ url_for('auth.login') }}">Inicia sesión</a></p>
                 </div>
             </div>
         </div>
