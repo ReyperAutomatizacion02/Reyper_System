@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Panel de Control | AutoIntelli</title>
+    <link rel="icon" href="{{ url_for('static', filename='images/logo.svg') }}" type="image/svg+xml">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -19,8 +20,9 @@
         <!-- Sidebar -->
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
-                <a href="{{ url_for('main.dashboard') }}" class="logo" style="font-size: 1.2rem;">
-                    <i class="ph-fill ph-database"></i> AutoIntelli
+                <a href="{{ url_for('main.dashboard') }}" class="logo" style="justify-content: center;">
+                    <img src="{{ url_for('static', filename='images/logo.svg') }}" alt="Reyper System"
+                        style="height: 45px; width: auto;">
                 </a>
                 <i class="ph ph-x sidebar-close" id="sidebar-close" style="display:none;"></i>
             </div>
@@ -76,7 +78,11 @@
                 <div class="user-info"
                     style="display: flex; align-items: center; gap: 1rem; color: var(--text-primary);">
                     <div style="text-align: right;">
-                        <div style="font-weight: 600;">{{ user }}</div>
+                        <div style="font-weight: 600;">{{ user.username or user.email }}</div>
+                        {% if user.username %}
+                        <div style="font-size: 0.7rem; color: var(--text-secondary); margin-bottom: 2px;">{{ user.email
+                            }}</div>
+                        {% endif %}
                         <div style="font-size: 0.8rem; margin-top: 2px;">
                             {% if roles %}
                             {% for role in roles %}

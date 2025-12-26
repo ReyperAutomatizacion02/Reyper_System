@@ -1,16 +1,15 @@
 from flask import Blueprint, render_template, session, redirect, url_for, flash, request
+from flask_login import login_required, current_user
 from extensions import supabase
 from constants import SYSTEM_MODULES
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
 @admin_bp.route('/users')
+@login_required
 def users():
-    if 'user' not in session: return redirect(url_for('auth.login'))
-    
     # Verificar Rol Admin
-    current_roles = session.get('roles', [])
-    if 'Admin' not in current_roles:
+    if not current_user.is_admin:
         flash('Acceso restringido a Administradores.', 'error')
         return redirect(url_for('main.dashboard'))
 
@@ -30,14 +29,14 @@ def users():
     return render_template('admin_users.html', 
                          profiles=profiles, 
                          available_roles=available_roles,
-                         user=session['user'],
-                         roles=current_roles,
+                         user=current_user,
+                         roles=current_user.roles,
                          modules=SYSTEM_MODULES)
 
 @admin_bp.route('/users/update', methods=['POST'])
+@login_required
 def user_update():
-    if 'user' not in session: return redirect(url_for('auth.login'))
-    if 'Admin' not in session.get('roles', []):
+    if not current_user.is_admin:
         flash('No tienes permisos.', 'error')
         return redirect(url_for('main.dashboard'))
         

@@ -1,4 +1,5 @@
 from flask import Blueprint, render_template, session, redirect, url_for, flash, request
+from flask_login import login_required, current_user
 import os
 import requests
 from constants import get_allowed_modules
@@ -11,43 +12,34 @@ SALES_TOOLS = [
 ]
 
 @sales_bp.route('/')
+@login_required
 def home():
-    if 'user' not in session: return redirect(url_for('auth.login'))
-    
     current_roles = session.get('roles', [])
     if 'Ventas' not in current_roles and 'Admin' not in current_roles:
         flash('No tienes acceso al módulo de Ventas.', 'error')
         return redirect(url_for('main.dashboard'))
     
     return render_template('sales_home.html', 
-                         user=session['user'], 
+                         user=current_user, 
                          roles=current_roles, 
                          tools=SALES_TOOLS)
 
 @sales_bp.route('/cotizar')
+@login_required
 def new_quotation():
-    if 'user' not in session: return redirect(url_for('auth.login'))
-    
     current_roles = session.get('roles', [])
     if 'Ventas' not in current_roles and 'Admin' not in current_roles:
         return redirect(url_for('main.dashboard'))
         
     return render_template('sales_quotation.html', 
-                         user=session['user'], 
+                         user=current_user, 
                          roles=current_roles, 
                          tools=SALES_TOOLS)
 
 @sales_bp.route('/api/submit', methods=['POST']) 
-# Note: The route in app.py was /api/quotation/submit. We might want to keep it global or namespaced.
-# If namespaced under /dashboard/ventas, it would be /dashboard/ventas/api/submit.
-# But existing JS calls /api/quotation/submit.
-# I will create a separate Blueprint for API or keep this strict.
-# Let's override the url_prefix for this specific route if possible, or just create an 'api' blueprint?
-# Or just put it here with the absolute path?
-# Flask blueprints can accept absolute paths starting with /.
 def submit_quotation():
     """Recibe datos del formulario y los reenvía al Webhook de n8n."""
-    if 'user' not in session: 
+    if not current_user.is_authenticated: 
         return {'success': False, 'message': 'No autorizado'}, 401
     
     try:

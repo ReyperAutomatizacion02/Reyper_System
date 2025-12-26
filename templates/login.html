@@ -5,29 +5,24 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Iniciar Sesión | AutoIntelli</title>
+    <link rel="icon" href="{{ url_for('static', filename='images/logo.svg') }}" type="image/svg+xml">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 
 <body>
-    <header>
-        <div class="container">
-            <nav>
-                <a href="{{ url_for('main.index') }}" class="logo">
-                    <i class="ph-fill ph-database"></i> AutoIntelli
-                </a>
-            </nav>
-        </div>
-    </header>
+
 
     <main>
         <div class="auth-container">
             <div class="auth-card">
                 <div class="auth-header">
+                    <img src="{{ url_for('static', filename='images/logo.svg') }}" alt="Reyper System"
+                        style="height: 60px; margin-bottom: 1.5rem;">
                     <h2>Bienvenido de nuevo</h2>
                     <p style="color: var(--text-secondary);">Accede a tu panel de control</p>
                 </div>
@@ -49,6 +44,12 @@
 
                 <div class="auth-footer">
                     <p>¿No tienes una cuenta? <a href="{{ url_for('auth.register') }}">Regístrate gratis</a></p>
+                    <div style="margin-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1rem;">
+                        <a href="{{ url_for('main.index') }}"
+                            style="color: var(--text-secondary); text-decoration: none; font-size: 0.9rem;">
+                            <i class="ph ph-arrow-left"></i> Volver al inicio
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>

@@ -1,5 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash
+from flask_login import login_user, logout_user, login_required
 from extensions import supabase
+from models import User
 import re
 
 auth_bp = Blueprint('auth', __name__)
@@ -21,11 +23,12 @@ def login():
                 supabase.table('profiles').insert({"id": user_id, "email": email, "status": "Pendiente"}).execute()
                 profile_status = 'Pendiente'
                 user_roles = []
+                username = None
             else:
                 profile_data = profile_response.data[0]
                 profile_status = profile_data.get('status', 'Pendiente')
-                user_roles = profile_data.get('roles', [])
-                if user_roles is None: user_roles = [] # Asegurar lista si es nulo
+                user_roles = profile_data.get('roles', []) or []
+                username = profile_data.get('username')
             
             # Validar estado
             if profile_status != 'Aprobado':
@@ -36,7 +39,11 @@ def login():
                     flash('El acceso a tu cuenta ha sido denegado o cancelado.', 'error')
                 return redirect(url_for('auth.login'))
 
-            session['user'] = response.user.email
+            # Create User object and login
+            user = User(id=user_id, email=email, username=username, roles=user_roles)
+            login_user(user)
+            
+            # Legacy session support (optional but good for modules reading session directly)
             session['roles'] = user_roles
             
             flash('Inicio de sesión exitoso', 'success')
@@ -48,6 +55,7 @@ def login():
 
 @auth_bp.route('/register', methods=['GET', 'POST'])
 def register():
+    # ... (Registration logic remains mostly the same, redirecting to login)
     if request.method == 'POST':
         email = request.form.get('email')
         password = request.form.get('password')
@@ -99,6 +107,6 @@ def register():
 @auth_bp.route('/logout')
 def logout():
     supabase.auth.sign_out()
-    session.pop('user', None)
+    logout_user() # Flask-Login logout
     session.pop('roles', None)
     return redirect(url_for('main.index'))
