@@ -9,6 +9,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
 </head>
 
@@ -131,8 +132,36 @@
         </main>
     </div>
 
+    <!-- Flash Messages Data -->
+    <div id="flash-messages" data-messages='{{ get_flashed_messages(with_categories=true) | tojson | safe }}'></div>
+
     <!-- Dashboard Sidebar Script -->
     <script>
+        // Handle Flash Messages
+        const flashData = document.getElementById('flash-messages').dataset.messages;
+        const flashMessages = flashData ? JSON.parse(flashData) : [];
+        if (flashMessages && flashMessages.length > 0) {
+            flashMessages.forEach(msg => {
+                const category = msg[0];
+                const message = msg[1];
+                // Check if Swal is defined (it might not be if CDN fail, but we added it)
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: category === 'error' ? 'error' : 'success',
+                        title: category === 'error' ? 'Error' : 'Éxito',
+                        text: message,
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 4000,
+                        timerProgressBar: true,
+                        background: '#1a1a20',
+                        color: '#fff'
+                    });
+                }
+            });
+        }
+
         const sidebar = document.getElementById('sidebar');
         const dashToggle = document.getElementById('dashboard-toggle');
         const closeBtn = document.getElementById('sidebar-close');

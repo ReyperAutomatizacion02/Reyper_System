@@ -19,6 +19,31 @@
     box-sizing: border-box;
 }
 
+/* Scrollbar Styles */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-color);
+}
+
+::-webkit-scrollbar-thumb {
+    background: #2a2a35;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #3a3a45;
+}
+
+/* Sidebar specific scrollbar adjustments if needed (inherits from above but can be specific) */
+.sidebar-menu::-webkit-scrollbar {
+    width: 6px;
+}
+
+
 body {
     font-family: var(--font-main);
     background-color: var(--bg-color);
@@ -360,8 +385,8 @@ footer p {
 /* Sidebar Transitions */
 .sidebar {
     width: 260px;
-    background: rgba(10, 10, 15, 0.95);
-    /* Darker, slightly opaque for mobile overlap */
+    background: #1a1a20;
+    /* Darker, opaque for better contrast */
     border-right: 1px solid var(--glass-border);
     padding: 2rem 1.5rem;
     display: flex;
