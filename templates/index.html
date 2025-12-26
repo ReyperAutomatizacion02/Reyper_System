@@ -24,7 +24,13 @@
                 <a href="#" class="logo">
                     <i class="ph-fill ph-database"></i> AutoIntelli
                 </a>
-                <div class="nav-links">
+
+                <!-- Mobile Toggle -->
+                <button class="mobile-menu-toggle landing-toggle" id="landing-toggle">
+                    <i class="ph ph-list"></i>
+                </button>
+
+                <div class="nav-links" id="landing-nav">
                     <a href="#features">Características</a>
                     <a href="#about">Acerca de</a>
                     <a href="#pricing">Precios</a>
@@ -88,6 +94,28 @@
             <p>&copy; 2025 AutoIntelli. Todos los derechos reservados.</p>
         </div>
     </footer>
+
+    <!-- Mobile Menu Script -->
+    <script>
+        const toggle = document.getElementById('landing-toggle');
+        const nav = document.getElementById('landing-nav');
+
+        if (toggle && nav) {
+            toggle.addEventListener('click', () => {
+                nav.classList.toggle('active');
+
+                // Toggle icon
+                const icon = toggle.querySelector('i');
+                if (nav.classList.contains('active')) {
+                    icon.classList.remove('ph-list');
+                    icon.classList.add('ph-x');
+                } else {
+                    icon.classList.remove('ph-x');
+                    icon.classList.add('ph-list');
+                }
+            });
+        }
+    </script>
 </body>
 
 </html>
