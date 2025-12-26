@@ -110,3 +110,39 @@ def logout():
     logout_user() # Flask-Login logout
     session.pop('roles', None)
     return redirect(url_for('main.index'))
+
+@auth_bp.route('/forgot-password', methods=['GET', 'POST'])
+def forgot_password():
+    if request.method == 'POST':
+        email = request.form.get('email')
+        try:
+            # Supabase sends the email with a redirect link
+            redirect_url = url_for('auth.reset_password', _external=True)
+            supabase.auth.reset_password_for_email(email, {"redirect_to": redirect_url})
+            flash('Si el correo está registrado, recibirás un enlace para restablecer tu contraseña.', 'success')
+            return redirect(url_for('auth.login'))
+        except Exception as e:
+            flash(f'Error: {str(e)}', 'error')
+    return render_template('forgot_password.html')
+
+@auth_bp.route('/reset-password', methods=['GET', 'POST'])
+def reset_password():
+    # El GET es cuando el usuario llega desde el correo.
+    # Supabase típicamente añade el token/sesión en la URL o fragmento.
+    # En un flujo de servidor (Flask), debemos capturar el 'code' si usamos PKCE 
+    # o simplemente confiar en que Supabase maneja la sesión si se hace del lado del cliente.
+    # Pero aquí estamos en el lado del servidor.
+    
+    if request.method == 'POST':
+        new_password = request.form.get('password')
+        try:
+            # Para actualizar, el usuario debe estar "autenticado" en la sesión de Supabase
+            # Si el enlace del correo funcionó, Supabase suele establecer la sesión.
+            supabase.auth.update_user({"password": new_password})
+            flash('Contraseña actualizada exitosamente. Ya puedes iniciar sesión.', 'success')
+            return redirect(url_for('auth.login'))
+        except Exception as e:
+            flash(f'Error al actualizar contraseña: {str(e)}', 'error')
+            return render_template('reset_password.html')
+
+    return render_template('reset_password.html')
