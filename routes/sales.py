@@ -51,8 +51,9 @@ def submit_quotation():
 
         # Inyectar metadata de seguridad / contexto
         data['metadata'] = {
-            'generated_by': session['user'],
-            'roles': session.get('roles', []),
+            'generated_by': current_user.email,
+            'username': getattr(current_user, 'username', 'N/A'),
+            'roles': getattr(current_user, 'roles', []),
             'source': 'AutoIntelli Web App'
         }
 
