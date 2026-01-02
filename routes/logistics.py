@@ -38,25 +38,23 @@ def capture_materials():
                          tools=LOGISTICS_TOOLS)
 
 # Caché en memoria para evitar consultas excesivas a Notion
+# Se mantiene durante la ejecución del servidor hasta que se solicite Recargar
 PARTIDAS_CACHE = {
     'data': None,
     'timestamp': None
 }
-CACHE_TTL = 600 # 10 minutos en segundos
 
 @logistics_bp.route('/api/partidas', methods=['GET'])
 @login_required
 def get_partidas():
-    """Obtiene la lista de partidas desde Notion con caché."""
+    """Obtiene la lista de partidas desde Notion con caché persistente (solo refresca con ?force=true)."""
     global PARTIDAS_CACHE
     try:
         force_refresh = request.args.get('force') == 'true'
-        now = datetime.now()
-
-        # Verificar si hay datos válidos en caché
+        
+        # Si NO es un refresco forzado y YA tenemos datos en caché, devolverlos directamente
         if not force_refresh and PARTIDAS_CACHE['data'] is not None:
-            if PARTIDAS_CACHE['timestamp'] and (now - PARTIDAS_CACHE['timestamp']).seconds < CACHE_TTL:
-                return jsonify({'success': True, 'partidas': PARTIDAS_CACHE['data'], 'cached': True})
+            return jsonify({'success': True, 'partidas': PARTIDAS_CACHE['data'], 'cached': True})
 
         load_dotenv()
         token = os.getenv('NOTION_TOKEN_LOGISTICA')
@@ -119,7 +117,7 @@ def get_partidas():
         
         # Actualizar caché
         PARTIDAS_CACHE['data'] = partidas
-        PARTIDAS_CACHE['timestamp'] = now
+        PARTIDAS_CACHE['timestamp'] = datetime.now()
         
         return jsonify({'success': True, 'partidas': partidas, 'cached': False})
             
