@@ -90,12 +90,15 @@ def get_partidas():
         partidas = []
         has_more = True
         next_cursor = None
+        pages_fetched = 0
+        MAX_PAGES = 5 # Limitar a 5 páginas (500 registros) para evitar timeout de Gunicorn (30s)
 
-        while has_more:
+        while has_more and pages_fetched < MAX_PAGES:
             if next_cursor:
                 payload["start_cursor"] = next_cursor
                 
-            response = requests.post(url, headers=headers, json=payload, timeout=20)
+            # Timeout de 10s por petición individual para no ahorcar al servidor
+            response = requests.post(url, headers=headers, json=payload, timeout=10)
             
             if response.ok:
                 data = response.json()
@@ -110,6 +113,7 @@ def get_partidas():
                 
                 has_more = data.get('has_more', False)
                 next_cursor = data.get('next_cursor')
+                pages_fetched += 1
             else:
                 return jsonify({'success': False, 'message': f'Error de Notion: {response.status_code}'}), 500
             
@@ -121,6 +125,8 @@ def get_partidas():
         
         return jsonify({'success': True, 'partidas': partidas, 'cached': False})
             
+    except requests.exceptions.Timeout:
+        return jsonify({'success': False, 'message': 'Tiempo de espera excedido al contactar con Notion. Intenta de nuevo.'}), 504
     except Exception as e:
         import traceback
         traceback.print_exc()
