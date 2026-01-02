@@ -46,13 +46,20 @@ PARTIDAS_CACHE = {
     'is_syncing': False
 }
 
+MATERIALES_CACHE = {
+    'data': [],
+    'timestamp': None,
+    'is_syncing': False
+}
+
 def refresh_notion_cache():
-    """Función para sincronizar datos de Notion en segundo plano."""
-    global PARTIDAS_CACHE
-    if PARTIDAS_CACHE['is_syncing']:
+    """Función para sincronizar datos de Notion (Partidas y Materiales) en segundo plano."""
+    global PARTIDAS_CACHE, MATERIALES_CACHE
+    if PARTIDAS_CACHE['is_syncing'] or MATERIALES_CACHE['is_syncing']:
         return
     
     PARTIDAS_CACHE['is_syncing'] = True
+    MATERIALES_CACHE['is_syncing'] = True
     try:
         load_dotenv()
         token = os.getenv('NOTION_TOKEN_LOGISTICA')
@@ -118,11 +125,57 @@ def refresh_notion_cache():
         new_partidas.sort()
         PARTIDAS_CACHE['data'] = new_partidas
         PARTIDAS_CACHE['timestamp'] = datetime.now()
+
+        # --- Sincronización de MATERIALES ---
+        material_db_id = os.getenv('NOTION_DATABASE_ID_MATERIAL')
+        if material_db_id:
+            url_mat = f"https://api.notion.com/v1/databases/{material_db_id}/query"
+            new_materiales = []
+            has_more = True
+            next_cursor = None
+            pages_fetched = 0
+            
+            # Re-usamos el endpoint de consulta
+            payload_mat = {
+                "filter": {
+                    "property": "MATERIAL",
+                    "title": {
+                        "is_not_empty": True
+                    }
+                }
+            }
+
+            while has_more and pages_fetched < MAX_PAGES:
+                if next_cursor:
+                    payload_mat["start_cursor"] = next_cursor
+                
+                response = requests.post(url_mat, headers=headers, json=payload_mat, timeout=30)
+                if response.ok:
+                    data = response.json()
+                    results = data.get('results', [])
+                    for page in results:
+                        props = page.get('properties', {})
+                        title_prop = props.get('MATERIAL', {}).get('title', [])
+                        if title_prop:
+                            text_content = title_prop[0].get('plain_text', '')
+                            if text_content:
+                                new_materiales.append(text_content)
+                    
+                    has_more = data.get('has_more', False)
+                    next_cursor = data.get('next_cursor')
+                    pages_fetched += 1
+                else:
+                    break
+            
+            new_materiales.sort()
+            MATERIALES_CACHE['data'] = new_materiales
+            MATERIALES_CACHE['timestamp'] = datetime.now()
         
     except Exception as e:
         print(f"ERROR en sincronización de Notion: {str(e)}")
     finally:
         PARTIDAS_CACHE['is_syncing'] = False
+        MATERIALES_CACHE['is_syncing'] = False
 
 def start_background_sync():
     """Inicia el hilo de sincronización cada 3 horas."""
@@ -158,6 +211,21 @@ def get_partidas():
             'is_syncing': PARTIDAS_CACHE['is_syncing']
         })
             
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@logistics_bp.route('/api/materiales', methods=['GET'])
+@login_required
+def get_materiales():
+    """Sirve la lista de materiales desde la caché sincronizada."""
+    global MATERIALES_CACHE
+    try:
+        return jsonify({
+            'success': True, 
+            'materiales': MATERIALES_CACHE['data'], 
+            'timestamp': MATERIALES_CACHE['timestamp'].strftime('%Y-%m-%d %H:%M:%S') if MATERIALES_CACHE['timestamp'] else None,
+            'is_syncing': MATERIALES_CACHE['is_syncing']
+        })
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
 
