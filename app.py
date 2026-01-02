@@ -47,5 +47,11 @@ app.register_blueprint(sales_bp)
 app.register_blueprint(admin_bp)
 app.register_blueprint(logistics_bp)
 
+# Iniciar sincronización de segundo plano para Logística
+from routes.logistics import start_background_sync
+# En producción o cuando no es el reloader de Flask
+if os.environ.get('WERKZEUG_RUN_MAIN') == 'true' or not app.debug:
+    start_background_sync()
+
 if __name__ == '__main__':
     app.run(debug=True)

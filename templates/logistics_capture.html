@@ -195,6 +195,7 @@
 
                 <div
                     style="text-align: right; display: flex; justify-content: flex-end; align-items: center; gap: 1rem;">
+                    <div id="syncTime" style="color: var(--text-muted); font-size: 0.8rem;"></div>
                     <div id="loadingStatus" style="color: var(--accent-primary); font-size: 0.9rem; display: none;">
                         <i class="ph ph-spinner ph-spin"></i> Cargando partidas desde Notion...
                     </div>
@@ -222,6 +223,26 @@
                 if (result.success) {
                     availablePartidas = result.partidas;
                     updateDatalist();
+
+                    if (result.is_syncing && availablePartidas.length === 0) {
+                        document.getElementById('syncTime').textContent = `Sincronizando por primera vez...`;
+                        // Reintentar en 5 segundos si está vacío y sincronizando
+                        setTimeout(() => fetchPartidas(), 5000);
+                    } else if (result.timestamp) {
+                        document.getElementById('syncTime').textContent = `Sincronizado: ${result.timestamp}`;
+                    }
+
+                    if (force) {
+                        Swal.fire({
+                            icon: 'info',
+                            title: 'Sincronización Iniciada',
+                            text: 'Se ha iniciado la descarga de datos frescos en segundo plano. La lista se actualizará automáticamente en unos minutos.',
+                            background: '#1a1a20',
+                            color: '#fff',
+                            timer: 3000,
+                            showConfirmButton: false
+                        });
+                    }
                 } else {
                     Swal.fire({
                         icon: 'error',

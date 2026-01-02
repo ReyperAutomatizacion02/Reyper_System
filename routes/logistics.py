@@ -2,6 +2,8 @@ from flask import Blueprint, render_template, session, redirect, url_for, flash,
 from flask_login import login_required, current_user
 import os
 import requests
+import threading
+import time
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
 
@@ -38,35 +40,33 @@ def capture_materials():
                          tools=LOGISTICS_TOOLS)
 
 # Caché en memoria para evitar consultas excesivas a Notion
-# Se mantiene durante la ejecución del servidor hasta que se solicite Recargar
 PARTIDAS_CACHE = {
-    'data': None,
-    'timestamp': None
+    'data': [],
+    'timestamp': None,
+    'is_syncing': False
 }
 
-@logistics_bp.route('/api/partidas', methods=['GET'])
-@login_required
-def get_partidas():
-    """Obtiene la lista de partidas desde Notion con caché persistente (solo refresca con ?force=true)."""
+def refresh_notion_cache():
+    """Función para sincronizar datos de Notion en segundo plano."""
     global PARTIDAS_CACHE
+    if PARTIDAS_CACHE['is_syncing']:
+        return
+    
+    PARTIDAS_CACHE['is_syncing'] = True
     try:
-        force_refresh = request.args.get('force') == 'true'
-        
-        # Si NO es un refresco forzado y YA tenemos datos en caché, devolverlos directamente
-        if not force_refresh and PARTIDAS_CACHE['data'] is not None:
-            return jsonify({'success': True, 'partidas': PARTIDAS_CACHE['data'], 'cached': True})
-
         load_dotenv()
         token = os.getenv('NOTION_TOKEN_LOGISTICA')
         database_id = os.getenv('NOTION_DATABASE_ID_LOGISTICA')
         
         if not token or not database_id:
-            return jsonify({'success': False, 'message': 'Credenciales de Notion no configuradas'}), 500
+            PARTIDAS_CACHE['is_syncing'] = False
+            return
 
         today = datetime.now()
         one_year_ago = (today - timedelta(days=365)).strftime('%Y-%m-%d')
         one_year_ahead = (today + timedelta(days=365)).strftime('%Y-%m-%d')
 
+        url = f"https://api.notion.com/v1/databases/{database_id}/query"
         headers = {
             "Authorization": f"Bearer {token}",
             "Notion-Version": "2022-06-28",
@@ -76,29 +76,27 @@ def get_partidas():
         payload = {
             "filter": {
                 "and": [
-                    {"property": "FECHA DE CREACION", "date": {"on_or_after": one_year_ago}},
-                    {"property": "FECHA DE CREACION", "date": {"on_or_before": one_year_ahead}},
+                    {"property": "CAPTURA DE MATERIAL", "relation": {"is_empty": True}},
                     {"property": "06-ESTATUS GENERAL", "select": {"does_not_equal": "D7-ENTREGADA"}},
                     {"property": "06-ESTATUS GENERAL", "select": {"does_not_equal": "D1-TERMINADA"}},
                     {"property": "06-ESTATUS GENERAL", "select": {"does_not_equal": "D8-CANCELADA"}},
-                    {"property": "CAPTURA DE MATERIAL", "relation": {"is_empty": True}}
+                    {"property": "FECHA DE CREACION", "date": {"on_or_after": one_year_ago}},
+                    {"property": "FECHA DE CREACION", "date": {"on_or_before": one_year_ahead}}
                 ]
             }
         }
 
-        url = f"https://api.notion.com/v1/databases/{database_id}/query"
-        partidas = []
+        new_partidas = []
         has_more = True
         next_cursor = None
         pages_fetched = 0
-        MAX_PAGES = 5 # Limitar a 5 páginas (500 registros) para evitar timeout de Gunicorn (30s)
+        MAX_PAGES = 100 # Hasta 10,000 registros
 
         while has_more and pages_fetched < MAX_PAGES:
             if next_cursor:
                 payload["start_cursor"] = next_cursor
                 
-            # Timeout de 10s por petición individual para no ahorcar al servidor
-            response = requests.post(url, headers=headers, json=payload, timeout=10)
+            response = requests.post(url, headers=headers, json=payload, timeout=30)
             
             if response.ok:
                 data = response.json()
@@ -109,27 +107,58 @@ def get_partidas():
                     if title_prop:
                         text_content = title_prop[0].get('plain_text', '')
                         if text_content:
-                            partidas.append(text_content)
+                            new_partidas.append(text_content)
                 
                 has_more = data.get('has_more', False)
                 next_cursor = data.get('next_cursor')
                 pages_fetched += 1
             else:
-                return jsonify({'success': False, 'message': f'Error de Notion: {response.status_code}'}), 500
+                break
             
-        partidas.sort()
-        
-        # Actualizar caché
-        PARTIDAS_CACHE['data'] = partidas
+        new_partidas.sort()
+        PARTIDAS_CACHE['data'] = new_partidas
         PARTIDAS_CACHE['timestamp'] = datetime.now()
         
-        return jsonify({'success': True, 'partidas': partidas, 'cached': False})
-            
-    except requests.exceptions.Timeout:
-        return jsonify({'success': False, 'message': 'Tiempo de espera excedido al contactar con Notion. Intenta de nuevo.'}), 504
     except Exception as e:
-        import traceback
-        traceback.print_exc()
+        print(f"ERROR en sincronización de Notion: {str(e)}")
+    finally:
+        PARTIDAS_CACHE['is_syncing'] = False
+
+def start_background_sync():
+    """Inicia el hilo de sincronización cada 3 horas."""
+    def run_sync():
+        while True:
+            refresh_notion_cache()
+            time.sleep(10800) # 3 horas
+    
+    thread = threading.Thread(target=run_sync, daemon=True)
+    thread.start()
+
+@logistics_bp.route('/api/partidas', methods=['GET'])
+@login_required
+def get_partidas():
+    """Sirve la lista de partidas desde la caché sincronizada."""
+    global PARTIDAS_CACHE
+    try:
+        force_refresh = request.args.get('force') == 'true'
+        
+        if force_refresh:
+            # Iniciar sincronización en segundo plano pero avisar al usuario
+            threading.Thread(target=refresh_notion_cache, daemon=True).start()
+            return jsonify({
+                'success': True, 
+                'partidas': PARTIDAS_CACHE['data'], 
+                'message': 'Sincronización iniciada en segundo plano...'
+            })
+
+        return jsonify({
+            'success': True, 
+            'partidas': PARTIDAS_CACHE['data'], 
+            'timestamp': PARTIDAS_CACHE['timestamp'].strftime('%Y-%m-%d %H:%M:%S') if PARTIDAS_CACHE['timestamp'] else None,
+            'is_syncing': PARTIDAS_CACHE['is_syncing']
+        })
+            
+    except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
 
 @logistics_bp.route('/api/submit', methods=['POST']) 
