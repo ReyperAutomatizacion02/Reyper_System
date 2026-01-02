@@ -5,6 +5,7 @@ from routes.auth import auth_bp
 from routes.main import main_bp
 from routes.sales import sales_bp
 from routes.admin import admin_bp
+from routes.logistics import logistics_bp
 
 from flask_login import LoginManager
 from models import User
@@ -44,6 +45,7 @@ app.register_blueprint(auth_bp)
 app.register_blueprint(main_bp)
 app.register_blueprint(sales_bp)
 app.register_blueprint(admin_bp)
+app.register_blueprint(logistics_bp)
 
 if __name__ == '__main__':
     app.run(debug=True)

@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Captura de Materiales | AutoIntelli</title>
+    <link rel="icon" href="{{ url_for('static', filename='images/logo.svg') }}" type="image/svg+xml">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        .capture-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .items-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin-top: 1rem;
+        }
+
+        .items-table th {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 1rem;
+            text-align: left;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        .items-table td {
+            background: rgba(255, 255, 255, 0.01);
+            border-bottom: 1px solid var(--glass-border);
+            padding: 0.5rem;
+            vertical-align: middle;
+        }
+
+        .table-input {
+            width: 100%;
+            background: transparent;
+            border: none;
+            color: white;
+            padding: 0.8rem 0.5rem;
+            outline: none;
+            font-family: inherit;
+            font-size: 0.9rem;
+        }
+
+        .table-input:focus {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+        }
+
+        select.table-input {
+            appearance: none;
+            cursor: pointer;
+            color: white;
+            background-color: transparent;
+        }
+
+        select.table-input option {
+            background-color: #1a1a20;
+            color: white;
+        }
+
+        .action-bar {
+            margin-top: 1rem;
+            display: flex;
+            gap: 1rem;
+        }
+
+        /* Ocultar flechas de input number */
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+    </style>
+</head>
+
+<body style="background-image: none; background-color: var(--bg-color);">
+    <div class="dashboard-layout">
+        <div class="sidebar-overlay" id="sidebar-overlay"></div>
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="{{ url_for('main.dashboard') }}" class="logo" style="justify-content: center;">
+                    <img src="{{ url_for('static', filename='images/logo.svg') }}" alt="Reyper System"
+                        style="height: 45px; width: auto;">
+                </a>
+                <i class="ph ph-x sidebar-close" id="sidebar-close" style="display:none;"></i>
+            </div>
+
+            <ul class="sidebar-menu">
+                <li class="menu-item">
+                    <a href="{{ url_for('main.dashboard') }}" class="menu-link">
+                        <i class="ph ph-squares-four"></i> Menú Principal
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="{{ url_for('logistics.home') }}" class="menu-link">
+                        <i class="ph ph-truck"></i> Panel Logística
+                    </a>
+                </li>
+
+                <li
+                    style="margin: 1.5rem 0 0.5rem 1rem; font-size: 0.75rem; text-transform: uppercase; color: var(--text-secondary); letter-spacing: 0.05em;">
+                    Herramientas</li>
+
+                {% for tool in tools %}
+                <li class="menu-item">
+                    <a href="{{ url_for(tool.route) }}"
+                        class="menu-link {{ 'active' if tool.name == 'captura' else '' }}">
+                        <i class="ph {{ tool.icon }}"></i> {{ tool.label }}
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+
+            <div style="margin-top: auto;">
+                <a href="{{ url_for('auth.logout') }}" class="menu-link" style="color: #ef4444;">
+                    <i class="ph ph-sign-out"></i> Cerrar Sesión
+                </a>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="top-bar" style="justify-content: space-between;">
+                <button class="mobile-menu-toggle" id="dashboard-toggle">
+                    <i class="ph ph-list"></i>
+                </button>
+                <h1>Captura de Materiales</h1>
+
+                <div class="user-info"
+                    style="display: flex; align-items: center; gap: 1rem; color: var(--text-primary);">
+                    <div style="text-align: right;">
+                        <div style="font-weight: 600;">{{ user.username or user.email }}</div>
+                        <div style="font-size: 0.8rem; margin-top: 2px;">
+                            {% for role in roles %}
+                            <span
+                                style="background: var(--accent-primary); padding: 2px 6px; border-radius: 4px; margin-left: 4px; font-size: 0.7rem;">{{
+                                role }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <form id="captureForm">
+                <div class="capture-card">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                        <h3 style="color: var(--accent-primary);">Lista de Materiales</h3>
+                        <button type="button" class="btn-secondary" onclick="addRow()">
+                            <i class="ph ph-plus"></i> Agregar Fila
+                        </button>
+                    </div>
+
+                    <div style="overflow-x: auto;">
+                        <table class="items-table" id="itemsTable">
+                            <thead>
+                                <tr>
+                                    <th style="width: 140px;">Partida</th>
+                                    <th style="min-width: 200px;">Material</th>
+                                    <th style="width: 80px;">Cant.</th>
+                                    <th style="width: 100px;">U.M.</th>
+                                    <th style="width: 90px;">Diámetro</th>
+                                    <th style="width: 90px;">Largo</th>
+                                    <th style="width: 90px;">Ancho</th>
+                                    <th style="width: 90px;">Alto/Esp.</th>
+                                    <th style="width: 20px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Datalist for Partidas -->
+                <datalist id="partidasList"></datalist>
+
+                <div
+                    style="text-align: right; display: flex; justify-content: flex-end; align-items: center; gap: 1rem;">
+                    <div id="loadingStatus" style="color: var(--accent-primary); font-size: 0.9rem; display: none;">
+                        <i class="ph ph-spinner ph-spin"></i> Cargando partidas desde Notion...
+                    </div>
+                    <button type="button" class="btn-secondary" id="refreshBtn" onclick="fetchPartidas(true)"
+                        title="Forzar actualización desde Notion">
+                        <i class="ph ph-arrows-clockwise"></i> Recargar
+                    </button>
+                    <button type="submit" class="btn-primary" id="submitBtn">
+                        <i class="ph ph-paper-plane-right"></i> Enviar a Notion
+                    </button>
+                </div>
+            </form>
+        </main>
+    </div>
+
+    <script>
+        let availablePartidas = [];
+
+        async function fetchPartidas(force = false) {
+            setLoading(true);
+            try {
+                const url = `{{ url_for('logistics.get_partidas') }}${force ? '?force=true' : ''}`;
+                const response = await fetch(url);
+                const result = await response.json();
+                if (result.success) {
+                    availablePartidas = result.partidas;
+                    updateDatalist();
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error de Notion',
+                        text: result.message,
+                        background: '#1a1a20',
+                        color: '#fff'
+                    });
+                }
+            } catch (error) {
+                console.error("Error fetching partidas:", error);
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        function setLoading(isLoading) {
+            const submitBtn = document.getElementById('submitBtn');
+            const refreshBtn = document.getElementById('refreshBtn');
+            const status = document.getElementById('loadingStatus');
+            const inputs = document.querySelectorAll('.table-input, .btn-secondary:not(#refreshBtn)');
+
+            if (isLoading) {
+                if (submitBtn) submitBtn.disabled = true;
+                if (refreshBtn) refreshBtn.disabled = true;
+                status.style.display = 'block';
+                inputs.forEach(el => el.disabled = true);
+            } else {
+                if (submitBtn) submitBtn.disabled = false;
+                if (refreshBtn) refreshBtn.disabled = false;
+                status.style.display = 'none';
+                inputs.forEach(el => el.disabled = false);
+            }
+        }
+
+        function updateDatalist() {
+            const datalist = document.getElementById('partidasList');
+            datalist.innerHTML = '';
+            availablePartidas.forEach(p => {
+                const option = document.createElement('option');
+                option.value = p;
+                datalist.appendChild(option);
+            });
+        }
+
+        function addRow() {
+            const tbody = document.querySelector('#itemsTable tbody');
+            const tr = document.createElement('tr');
+
+            tr.innerHTML = `
+                <td>
+                    <input type="text" class="table-input partida-input" list="partidasList" placeholder="Buscar partida...">
+                </td>
+                <td><input type="text" class="table-input material-input" placeholder="Material/Grosor..."></td>
+                <td><input type="number" class="table-input cantidad-input" value="1" min="1"></td>
+                <td>
+                    <select class="table-input um-input">
+                        <option value="mm">mm</option>
+                        <option value="in">in</option>
+                    </select>
+                </td>
+                <td><input type="number" class="table-input diametro-input" step="0.01" placeholder="0"></td>
+                <td><input type="number" class="table-input largo-input" step="0.01" placeholder="0"></td>
+                <td><input type="number" class="table-input ancho-input" step="0.01" placeholder="0"></td>
+                <td><input type="number" class="table-input alto-input" step="0.01" placeholder="0"></td>
+                <td>
+                    <div style="color: #ef4444; cursor: pointer; text-align: center;" onclick="deleteRow(this)">
+                        <i class="ph ph-trash"></i>
+                    </div>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        }
+
+        function deleteRow(btn) {
+            const tbody = document.querySelector('#itemsTable tbody');
+            if (tbody.children.length > 1) {
+                btn.closest('tr').remove();
+            } else {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Atención',
+                    text: 'Debe haber al menos una partida.',
+                    background: '#1a1a20',
+                    color: '#fff'
+                });
+            }
+        }
+
+        // Initialize
+        addRow();
+        fetchPartidas();
+
+        document.getElementById('captureForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const rows = document.querySelectorAll('#itemsTable tbody tr');
+            const items = [];
+            let valid = true;
+            let missingPartida = false;
+
+            rows.forEach(row => {
+                const material = row.querySelector('.material-input').value;
+                const partida = row.querySelector('.partida-input').value;
+
+                if (!material) {
+                    valid = false;
+                    return;
+                }
+                if (!partida) {
+                    missingPartida = true;
+                    return;
+                }
+
+                items.push({
+                    partida: partida,
+                    material: material,
+                    cantidad: parseFloat(row.querySelector('.cantidad-input').value) || 0,
+                    um: row.querySelector('.um-input').value,
+                    diametro: parseFloat(row.querySelector('.diametro-input').value) || 0,
+                    largo: parseFloat(row.querySelector('.largo-input').value) || 0,
+                    ancho: parseFloat(row.querySelector('.ancho-input').value) || 0,
+                    alto: parseFloat(row.querySelector('.alto-input').value) || 0
+                });
+            });
+
+            if (missingPartida) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Por favor seleccione una Partida para todas las filas.',
+                    background: '#1a1a20',
+                    color: '#fff'
+                });
+                return;
+            }
+
+            if (!valid || items.length === 0) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Por favor complete el nombre del material para todas las filas.',
+                    background: '#1a1a20',
+                    color: '#fff'
+                });
+                return;
+            }
+
+            const confirm = await Swal.fire({
+                title: '¿Enviar materiales?',
+                text: "Se enviarán los datos a la base de datos de Notion.",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#DD2122',
+                confirmButtonText: 'Sí, enviar',
+                background: '#1a1a20',
+                color: '#fff'
+            });
+
+            if (!confirm.isConfirmed) return;
+
+            const submitBtn = document.getElementById('submitBtn');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="ph ph-spinner ph-spin"></i> Enviando...';
+
+            try {
+                const response = await fetch("{{ url_for('logistics.submit_capture') }}", {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ items })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    await Swal.fire({
+                        icon: 'success',
+                        title: '¡Éxito!',
+                        text: result.message,
+                        background: '#1a1a20',
+                        color: '#fff'
+                    });
+                    // Reset form
+                    document.querySelector('#itemsTable tbody').innerHTML = '';
+                    addRow();
+                } else {
+                    throw new Error(result.message);
+                }
+            } catch (error) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: error.message,
+                    background: '#1a1a20',
+                    color: '#fff'
+                });
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            }
+        });
+
+        // Sidebar logic
+        const sidebar = document.getElementById('sidebar');
+        const dashToggle = document.getElementById('dashboard-toggle');
+        const closeBtn = document.getElementById('sidebar-close');
+        const overlay = document.getElementById('sidebar-overlay');
+
+        function toggleSidebar() {
+            if (sidebar) {
+                sidebar.classList.toggle('active');
+                if (overlay) overlay.classList.toggle('active');
+            }
+        }
+
+        if (dashToggle) dashToggle.addEventListener('click', toggleSidebar);
+        if (closeBtn) closeBtn.addEventListener('click', toggleSidebar);
+        if (overlay) overlay.addEventListener('click', toggleSidebar);
+    </script>
+</body>
+
+</html>

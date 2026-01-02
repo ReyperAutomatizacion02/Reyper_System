@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Logística | AutoIntelli</title>
+    <link rel="icon" href="{{ url_for('static', filename='images/logo.svg') }}" type="image/svg+xml">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+</head>
+
+<body style="background-image: none; background-color: var(--bg-color);">
+    <div class="dashboard-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <a href="{{ url_for('main.dashboard') }}" class="logo" style="justify-content: center;">
+                    <img src="{{ url_for('static', filename='images/logo.svg') }}" alt="Reyper System"
+                        style="height: 45px; width: auto;">
+                </a>
+            </div>
+
+            <ul class="sidebar-menu">
+                <li class="menu-item">
+                    <a href="{{ url_for('main.dashboard') }}" class="menu-link">
+                        <i class="ph ph-squares-four"></i> Menú Principal
+                    </a>
+                </li>
+
+                <li class="menu-item">
+                    <a href="{{ url_for('logistics.home') }}" class="menu-link active">
+                        <i class="ph ph-truck"></i> Panel Logística
+                    </a>
+                </li>
+
+                <li
+                    style="margin: 1.5rem 0 0.5rem 1rem; font-size: 0.75rem; text-transform: uppercase; color: var(--text-secondary); letter-spacing: 0.05em;">
+                    Herramientas</li>
+
+                {% for tool in tools %}
+                <li class="menu-item">
+                    <a href="{{ url_for(tool.route) }}" class="menu-link">
+                        <i class="ph {{ tool.icon }}"></i> {{ tool.label }}
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+
+            <div style="margin-top: auto;">
+                <a href="{{ url_for('auth.logout') }}" class="menu-link" style="color: #ef4444;">
+                    <i class="ph ph-sign-out"></i> Cerrar Sesión
+                </a>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="top-bar" style="justify-content: flex-end;">
+                <div class="user-info"
+                    style="display: flex; align-items: center; gap: 1rem; color: var(--text-primary);">
+                    <div style="text-align: right;">
+                        <div style="font-weight: 600;">{{ user.username or user.email }}</div>
+                        {% if user.username %}
+                        <div style="font-size: 0.7rem; color: var(--text-secondary); margin-bottom: 2px;">{{ user.email
+                            }}</div>
+                        {% endif %}
+                        <div style="font-size: 0.8rem; margin-top: 2px;">
+                            {% if roles %}
+                            {% for role in roles %}
+                            <span
+                                style="background: var(--accent-primary); padding: 2px 6px; border-radius: 4px; margin-left: 4px; font-size: 0.7rem;">{{
+                                role }}</span>
+                            {% endfor %}
+                            {% else %}
+                            <span style="opacity: 0.7;">Sin rol</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div
+                        style="width: 40px; height: 40px; background: rgba(255,255,255,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                        <i class="ph ph-user"></i>
+                    </div>
+                </div>
+            </div>
+
+            <h1 style="margin-bottom: 2rem;">Módulo de Logística</h1>
+
+            <div class="features-grid">
+                {% for tool in tools %}
+                <a href="{{ url_for(tool.route) }}" style="text-decoration: none; color: inherit; display: block;">
+                    <div class="feature-card" style="cursor: pointer; height: 100%;">
+                        <div class="feature-icon">
+                            <i class="ph {{ tool.icon }}"></i>
+                        </div>
+                        <h3>{{ tool.label }}</h3>
+                        <p>Acceder a la herramienta</p>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+        </main>
+    </div>
+</body>
+
+</html>

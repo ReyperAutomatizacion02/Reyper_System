@@ -50,7 +50,8 @@
                 {% for mod in modules %}
                 <li class="menu-item">
                     <!-- CORRECCIÓN AQUÍ: sales_dashboard -->
-                    <a href="{{ url_for('sales.home') if mod.name == 'Ventas' else '#' }}" class="menu-link">
+                    <a href="{{ url_for('sales.home') if mod.name == 'Ventas' else url_for('logistics.home') if mod.name == 'Logistica' else '#' }}"
+                        class="menu-link">
                         <i class="ph {{ mod.icon }}"></i> {{ mod.label }}
                     </a>
                 </li>
@@ -112,6 +113,8 @@
                     {% if mod.name == 'Ventas' %}
                     <!-- CORRECCIÓN AQUÍ: sales_dashboard -->
                     {% set target_url = url_for('sales.home') %}
+                    {% elif mod.name == 'Logistica' %}
+                    {% set target_url = url_for('logistics.home') %}
                     {% endif %}
 
                     <a href="{{ target_url }}" style="text-decoration: none; color: inherit; display: block;">
