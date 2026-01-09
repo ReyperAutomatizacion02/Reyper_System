@@ -146,16 +146,28 @@
                 <h1>Captura de Materiales</h1>
 
                 <div class="user-info"
-                    style="display: flex; align-items: center; gap: 1rem; color: var(--text-primary);">
+                    style="display: flex; align-items: center; gap: 1rem; color: var(--text-primary); margin-left: auto;">
                     <div style="text-align: right;">
                         <div style="font-weight: 600;">{{ user.username or user.email }}</div>
+                        {% if user.username %}
+                        <div style="font-size: 0.7rem; color: var(--text-secondary); margin-bottom: 2px;">{{ user.email
+                            }}</div>
+                        {% endif %}
                         <div style="font-size: 0.8rem; margin-top: 2px;">
+                            {% if roles %}
                             {% for role in roles %}
                             <span
                                 style="background: var(--accent-primary); padding: 2px 6px; border-radius: 4px; margin-left: 4px; font-size: 0.7rem;">{{
                                 role }}</span>
                             {% endfor %}
+                            {% else %}
+                            <span style="opacity: 0.7;">Sin rol</span>
+                            {% endif %}
                         </div>
+                    </div>
+                    <div
+                        style="width: 40px; height: 40px; background: rgba(255,255,255,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                        <i class="ph ph-user"></i>
                     </div>
                 </div>
             </div>
@@ -418,6 +430,13 @@
             // Función para mover al siguiente input al seleccionar una opción de la lista
             dimInputs.forEach((input, index) => {
                 input.addEventListener('input', (e) => {
+                    // Restringir caracteres: solo números, / y espacios
+                    const originalValue = e.target.value;
+                    const cleanedValue = originalValue.replace(/[^0-9\/ ]/g, '');
+                    if (originalValue !== cleanedValue) {
+                        e.target.value = cleanedValue;
+                    }
+
                     const val = e.target.value.trim();
                     if (umSelect.value === 'in' && STANDARD_INCHES.includes(val)) {
                         // Si el valor coincide exactamente con una opción estándar, 
@@ -580,10 +599,10 @@
                     forma: forma,
                     cantidad: cantidad,
                     um: um,
-                    diametro: (um === 'in' ? diamRaw : diam.toString()),
-                    largo: (um === 'in' ? largoRaw : largo.toString()),
-                    ancho: (um === 'in' ? anchoRaw : ancho.toString()),
-                    alto: (um === 'in' ? altoRaw : alto.toString())
+                    diametro: diamRaw,
+                    largo: largoRaw,
+                    ancho: anchoRaw,
+                    alto: altoRaw
                 };
 
                 items.push(itemData);
