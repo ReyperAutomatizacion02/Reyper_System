@@ -59,6 +59,8 @@
         }
 
         select.table-input {
+            -webkit-appearance: none;
+            -moz-appearance: none;
             appearance: none;
             cursor: pointer;
             color: white;
@@ -197,7 +199,7 @@
                 <!-- Datalist for Materiales -->
                 <datalist id="materialesList"></datalist>
 
-                <!-- Datalist for Standard Inches (Dynamic) -->
+                <!-- Datalist for Standard Inches (Static Global) -->
                 <datalist id="standardInchesList"></datalist>
 
                 <div
@@ -328,6 +330,15 @@
             list.innerHTML = availableMateriales.map(m => `<option value="${m}">`).join('');
         }
 
+        // Poblar el datalist global de pulgadas una sola vez
+        function populateStandardInches() {
+            const list = document.getElementById('standardInchesList');
+            if (list) {
+                list.innerHTML = STANDARD_INCHES.map(i => `<option value="${i}">`).join('');
+            }
+        }
+        populateStandardInches();
+
         function addRow() {
             const tbody = document.querySelector('#itemsTable tbody');
             const tr = document.createElement('tr');
@@ -396,38 +407,34 @@
             const umSelect = tr.querySelector('.um-input');
             const dimInputs = [inputs.diametro, inputs.largo, inputs.ancho, inputs.alto];
 
-            const updateInchSuggestions = (input) => {
-                if (umSelect.value !== 'in') return;
-                const val = input.value;
-                const datalist = document.getElementById('standardInchesList');
-
-                // Si está vacío, mostrar los primeros 20 para no saturar
-                if (!val) {
-                    datalist.innerHTML = STANDARD_INCHES.slice(0, 20).map(i => `<option value="${i}">`).join('');
-                    return;
-                }
-
-                // Búsqueda específica: solo los que EMPIEZAN con los caracteres ingresados
-                const filtered = STANDARD_INCHES.filter(i => i.startsWith(val));
-                datalist.innerHTML = filtered.map(i => `<option value="${i}">`).join('');
-            };
-
+            // Toggle datalist based on unit
             umSelect.addEventListener('change', (e) => {
                 const listId = e.target.value === 'in' ? 'standardInchesList' : '';
                 dimInputs.forEach(input => {
                     input.setAttribute('list', listId);
-                    if (listId) updateInchSuggestions(input);
                 });
             });
 
-            dimInputs.forEach(input => {
-                input.addEventListener('input', () => updateInchSuggestions(input));
-                input.addEventListener('focus', () => updateInchSuggestions(input));
-            });
+            // Función para mover al siguiente input al seleccionar una opción de la lista
+            dimInputs.forEach((input, index) => {
+                input.addEventListener('input', (e) => {
+                    const val = e.target.value.trim();
+                    if (umSelect.value === 'in' && STANDARD_INCHES.includes(val)) {
+                        // Si el valor coincide exactamente con una opción estándar, 
+                        // movemos el foco al siguiente input si existe
+                        const nextInput = dimInputs[index + 1];
+                        if (nextInput && !nextInput.disabled) {
+                            nextInput.focus();
+                        } else {
+                            // Si no hay siguiente o está deshabilitado, quitamos el foco
+                            e.target.blur();
+                        }
+                    }
+                });
 
-            inputs.diametro.addEventListener('input', validateDimensions);
-            inputs.ancho.addEventListener('input', validateDimensions);
-            inputs.alto.addEventListener('input', validateDimensions);
+                // También validar dimensiones al cambiar
+                input.addEventListener('input', validateDimensions);
+            });
 
             tbody.appendChild(tr);
         }
@@ -478,6 +485,14 @@
         fetchPartidas();
         fetchMateriales();
 
+        // Evitar enviar formulario al pulsar Enter en los inputs
+        document.getElementById('captureForm').addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' && e.target.tagName === 'INPUT') {
+                e.preventDefault();
+                return false;
+            }
+        });
+
         document.getElementById('captureForm').addEventListener('submit', async function (e) {
             e.preventDefault();
 
@@ -493,12 +508,25 @@
                 const material = materialInput.value.trim();
                 const forma = formaInput.value;
                 const cantidad = parseFloat(row.querySelector('.cantidad-input').value) || 0;
-                const um = row.querySelector('.um-input').value;
+                const umSelect = row.querySelector('.um-input');
+                const um = umSelect ? umSelect.value : 'mm';
 
-                const diam = parseFraction(row.querySelector('.diametro-input').value);
-                const largo = parseFraction(row.querySelector('.largo-input').value);
-                const ancho = parseFraction(row.querySelector('.ancho-input').value);
-                const alto = parseFraction(row.querySelector('.alto-input').value);
+                // Capturamos el texto original para enviarlo si es pulgadas
+                const diamInput = row.querySelector('.diametro-input');
+                const largoInput = row.querySelector('.largo-input');
+                const anchoInput = row.querySelector('.ancho-input');
+                const altoInput = row.querySelector('.alto-input');
+
+                const diamRaw = diamInput ? diamInput.value.trim() : '0';
+                const largoRaw = largoInput ? largoInput.value.trim() : '0';
+                const anchoRaw = anchoInput ? anchoInput.value.trim() : '0';
+                const altoRaw = altoInput ? altoInput.value.trim() : '0';
+
+                // Parseamos para validaciones internas
+                const diam = parseFraction(diamRaw);
+                const largo = parseFraction(largoRaw);
+                const ancho = parseFraction(anchoRaw);
+                const alto = parseFraction(altoRaw);
 
                 // Validaciones básicas
                 if (!partida || !material) {
@@ -512,7 +540,7 @@
                     return;
                 }
 
-                // Validación de medidas según forma
+                // ... (validaciones de forma iguales)
                 if (forma === 'Cilíndrica') {
                     if (diam <= 0 || largo <= 0) {
                         await Swal.fire({
@@ -536,7 +564,6 @@
                         return;
                     }
                 } else {
-                    // Si no tiene forma definida (no ingresó medidas)
                     await Swal.fire({
                         icon: 'error',
                         title: 'Faltan medidas',
@@ -547,20 +574,24 @@
                     return;
                 }
 
-                items.push({
-                    partida,
-                    material,
-                    forma,
-                    cantidad,
-                    um,
-                    diametro: diam,
-                    largo: largo,
-                    ancho: ancho,
-                    alto: alto
-                });
+                const itemData = {
+                    partida: partida,
+                    material: material,
+                    forma: forma,
+                    cantidad: cantidad,
+                    um: um,
+                    diametro: (um === 'in' ? diamRaw : diam.toString()),
+                    largo: (um === 'in' ? largoRaw : largo.toString()),
+                    ancho: (um === 'in' ? anchoRaw : ancho.toString()),
+                    alto: (um === 'in' ? altoRaw : alto.toString())
+                };
+
+                items.push(itemData);
             }
 
             if (items.length === 0) return;
+
+            console.log("Enviando items:", items); // Debug para el usuario en consola
 
             // Mostrar estado de carga en el botón
             const submitBtn = document.getElementById('submitBtn');
