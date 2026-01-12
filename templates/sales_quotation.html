@@ -11,6 +11,7 @@
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="{{ url_for('static', filename='js/dropdowns.js') }}"></script>
     <style>
         .quotation-card {
             background: rgba(255, 255, 255, 0.02);
@@ -46,6 +47,10 @@
         .form-input[type="number"],
         select.form-input {
             color-scheme: dark;
+        }
+
+        .form-input {
+            text-transform: uppercase;
         }
 
         select.form-input {
@@ -116,6 +121,7 @@
             padding: 0.8rem 0.5rem;
             outline: none;
             font-family: inherit;
+            text-transform: uppercase;
         }
 
         textarea.table-input {
@@ -219,6 +225,9 @@
                     <a href="{{ url_for(tool.route) }}"
                         class="menu-link {{ 'active' if tool.name == 'cotizador' else '' }}">
                         <i class="ph {{ tool.icon }}"></i> <span>{{ tool.label }}</span>
+                    </a>
+                </li>
+                {% endfor %}
             </ul>
 
             <div class="sidebar-footer">
@@ -236,6 +245,14 @@
                     <i class="ph ph-list"></i>
                 </button>
                 <h1>Nueva Cotización</h1>
+
+                <div class="actions-group" style="margin-left: auto; margin-right: 1rem; display: flex; gap: 0.5rem;">
+                    <button type="button" class="btn-secondary" id="refreshBtn" title="Sincronizar con Notion"
+                        style="padding: 0.5rem 1rem; font-size: 0.85rem; display: flex; align-items: center; gap: 0.5rem; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); color: white; border-radius: 6px; cursor: pointer; transition: all 0.2s;">
+                        <i class="ph ph-arrows-clockwise" id="refreshIcon"></i>
+                        <span>Sincronizar</span>
+                    </button>
+                </div>
 
                 <div class="user-info"
                     style="display: flex; align-items: center; gap: 1rem; color: var(--text-primary);">
@@ -273,19 +290,19 @@
                     <div class="form-grid-3">
                         <div>
                             <label class="form-label"><i class="ph ph-buildings"></i> Cotizar como</label>
-                            <select class="form-input" id="cotizadoComo">
-                                <option value="DMR">DMR</option>
-                                <option value="Jose de Jesus">José de Jesús</option>
-                                <option value="Inversa">Inversa</option>
-                            </select>
+                            <div class="select-wrapper cotizado-wrapper has-data">
+                                <input type="text" class="form-input" id="cotizadoComo" placeholder="DMR" readonly
+                                    style="cursor: pointer;">
+                            </div>
                         </div>
                         <div>
                             <label class="form-label"><i class="ph ph-hash"></i> No. Requisición</label>
-                            <input type="text" class="form-input" id="noRequisicion" placeholder="REQ-001">
+                            <input type="text" class="form-input" id="noRequisicion" placeholder="REQ-001"
+                                autocomplete="off">
                         </div>
                         <div>
                             <label class="form-label"><i class="ph ph-tag"></i> No. Parte</label>
-                            <input type="text" class="form-input" id="noParte" placeholder="PN-X99">
+                            <input type="text" class="form-input" id="noParte" placeholder="PN-X99" autocomplete="off">
                         </div>
                     </div>
 
@@ -301,10 +318,10 @@
                         </div>
                         <div>
                             <label class="form-label"><i class="ph ph-currency-dollar"></i> Moneda</label>
-                            <select class="form-input" id="moneda">
-                                <option value="MXN">MXN - Peso Mexicano</option>
-                                <option value="USD">USD - Dólar Americano</option>
-                            </select>
+                            <div class="select-wrapper moneda-wrapper has-data">
+                                <input type="text" class="form-input" id="moneda" placeholder="MXN" readonly
+                                    style="cursor: pointer;">
+                            </div>
                         </div>
                     </div>
 
@@ -312,16 +329,23 @@
                     <div class="form-grid-3">
                         <div>
                             <label class="form-label"><i class="ph ph-briefcase"></i> Cliente</label>
-                            <input type="text" class="form-input" id="cliente" placeholder="Empresa S.A. de C.V.">
+                            <div class="select-wrapper cliente-wrapper">
+                                <input type="text" class="form-input" id="cliente" placeholder="Empresa S.A. de C.V."
+                                    autocomplete="off">
+                            </div>
                         </div>
                         <div>
                             <label class="form-label"><i class="ph ph-user"></i> Usuario</label>
-                            <input type="text" class="form-input" id="usuarioCliente" placeholder="Nombre completo">
+                            <div class="select-wrapper usuario-wrapper">
+                                <input type="text" class="form-input" id="usuarioCliente" placeholder="Nombre completo"
+                                    autocomplete="off">
+                            </div>
                         </div>
                         <div>
                             <label class="form-label"><i class="ph ph-credit-card"></i> Condiciones de Pago
                                 (Días)</label>
-                            <input type="number" class="form-input" id="condicionesPago" value="30" step="10" min="0">
+                            <input type="number" class="form-input" id="condicionesPago" value="30" step="10" min="0"
+                                autocomplete="off">
                         </div>
                     </div>
 
@@ -329,15 +353,21 @@
                     <div class="form-grid-3">
                         <div>
                             <label class="form-label"><i class="ph ph-identification-card"></i> Puesto</label>
-                            <input type="text" class="form-input" id="puesto">
+                            <div class="select-wrapper puesto-wrapper">
+                                <input type="text" class="form-input" id="puesto" autocomplete="off">
+                            </div>
                         </div>
                         <div>
                             <label class="form-label"><i class="ph ph-map-pin"></i> Área</label>
-                            <input type="text" class="form-input" id="area" placeholder="Ej. Mantenimiento">
+                            <div class="select-wrapper area-wrapper">
+                                <input type="text" class="form-input" id="area" placeholder="Ej. Mantenimiento"
+                                    autocomplete="off">
+                            </div>
                         </div>
                         <div>
                             <label class="form-label"><i class="ph ph-hourglass"></i> Vigencia (Días)</label>
-                            <input type="number" class="form-input" id="vigencia" value="30" step="5" min="0">
+                            <input type="number" class="form-input" id="vigencia" value="30" step="5" min="0"
+                                autocomplete="off">
                         </div>
                     </div>
                 </div>
@@ -452,35 +482,70 @@
             textarea.style.height = textarea.scrollHeight + 'px'; // Set to content height
         }
 
+        function updateLotNumbers() {
+            const rows = document.querySelectorAll('#itemsTable tbody tr');
+            rows.forEach((row, index) => {
+                const lotInput = row.querySelector('.lot-input');
+                if (lotInput) lotInput.value = index + 1;
+            });
+        }
+
         function addRow() {
             const tbody = document.querySelector('#itemsTable tbody');
-            const rowCount = tbody.children.length + 1;
-
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td><input type="text" class="table-input lot-input" value="${rowCount}" readonly style="text-align: center;"></td>
+                <td><input type="text" class="table-input lot-input" value="" readonly style="text-align: center;"></td>
                 <td>
-                    <textarea class="table-input desc-input" placeholder="Descripción del artículo..." rows="1" oninput="autoResize(this)"></textarea>
+                    <textarea class="table-input desc-input" placeholder="Descripción del artículo..." rows="1" oninput="autoResize(this)" autocomplete="off"></textarea>
                 </td>
-                <td><input type="number" class="table-input qty-input" value="1" min="1" oninput="calculateTotals()"></td>
                 <td>
-                    <select class="table-input um-input">
-                        <option value="PZA">PZA</option>
-                        <option value="KIT">KIT</option>
-                        <option value="ENSAMBLE">ENSAMBLE</option>
-                        <option value="SERVICIO">SERVICIO</option>
-                    </select>
+                    <div class="quantity-wrapper">
+                        <button type="button" class="quantity-btn minus-btn"><i class="ph ph-minus"></i></button>
+                        <input type="number" class="table-input qty-input quantity-input" value="1" min="1" oninput="calculateTotals()" autocomplete="off">
+                        <button type="button" class="quantity-btn plus-btn"><i class="ph ph-plus"></i></button>
+                    </div>
                 </td>
-                <td><input type="number" class="table-input price-input" placeholder="0.00" oninput="calculateTotals()"></td>
+                <td>
+                    <div class="select-wrapper um-row-wrapper has-data">
+                        <input type="text" class="table-input um-input" value="PZA" readonly style="cursor: pointer; text-align: center;" autocomplete="off">
+                    </div>
+                </td>
+                <td><input type="number" class="table-input price-input" placeholder="0.00" oninput="calculateTotals()" autocomplete="off"></td>
                 <td><div style="color: #ef4444; cursor: pointer; text-align: center; padding-top: 0.8rem;" onclick="deleteRow(this)"><i class="ph ph-trash"></i></div></td>
                 <td class="row-total" style="text-align: right; padding-right: 1rem; padding-top: 0.8rem;">$0.00</td>
             `;
             tbody.appendChild(tr);
+
+            // Initialize Quantity Buttons
+            const qtyInput = tr.querySelector('.qty-input');
+            const minusBtn = tr.querySelector('.minus-btn');
+            const plusBtn = tr.querySelector('.plus-btn');
+
+            minusBtn.onclick = () => {
+                const val = parseInt(qtyInput.value) || 1;
+                if (val > 1) {
+                    qtyInput.value = val - 1;
+                    calculateTotals();
+                }
+            };
+
+            plusBtn.onclick = () => {
+                const val = parseInt(qtyInput.value) || 1;
+                qtyInput.value = val + 1;
+                calculateTotals();
+            };
+
+            // Initialize U.M. Dropdown
+            const umInput = tr.querySelector('.um-input');
+            initCustomDropdown(umInput, ['PZA', 'KIT', 'ENSAMBLE', 'SERVICIO'], 'um-row-wrapper');
+
+            updateLotNumbers();
         }
 
         function deleteRow(btn) {
             btn.closest('tr').remove();
             calculateTotals();
+            updateLotNumbers();
         }
 
         // Initialize with 3 rows
@@ -489,6 +554,127 @@
         }
 
         // --- SUBMIT LOGIC WITH SWEETALERT2 ---
+        // Dynamic Dropdowns for Sales
+        let availableClientes = [];
+        let availableUsuarios = [];
+        let availablePuestos = [];
+        let availableAreas = [];
+
+        async function fetchSalesData(force = false) {
+            const refreshBtn = document.getElementById('refreshBtn');
+            const refreshIcon = document.getElementById('refreshIcon');
+
+            if (force) {
+                if (refreshBtn) refreshBtn.disabled = true;
+                if (refreshIcon) refreshIcon.classList.add('ph-spin');
+
+                Swal.fire({
+                    title: 'Sincronizando...',
+                    text: 'Obteniendo datos frescos de Notion',
+                    allowOutsideClick: false,
+                    showConfirmButton: false,
+                    background: '#1a1a20',
+                    color: '#fff',
+                    didOpen: () => { Swal.showLoading(); }
+                });
+            }
+
+            try {
+                if (force) {
+                    await fetch("{{ url_for('sales.refresh_data') }}");
+                    // Esperar un momento para que Notion responda y la caché se actualice
+                    await new Promise(r => setTimeout(r, 2000));
+                }
+
+                const [resC, resU, resP, resA] = await Promise.all([
+                    fetch("{{ url_for('sales.get_clientes') }}"),
+                    fetch("{{ url_for('sales.get_usuarios') }}"),
+                    fetch("{{ url_for('sales.get_puestos') }}"),
+                    fetch("{{ url_for('sales.get_areas') }}")
+                ]);
+                const [dataC, dataU, dataP, dataA] = await Promise.all([
+                    resC.json(),
+                    resU.json(),
+                    resP.json(),
+                    resA.json()
+                ]);
+
+                if (dataC.success) {
+                    availableClientes = dataC.data;
+                    document.querySelector('.cliente-wrapper').classList.toggle('has-data', availableClientes.length > 0);
+                    console.log("DEBUG: Clientes cargados:", availableClientes.length);
+                }
+                if (dataU.success) {
+                    availableUsuarios = dataU.data;
+                    document.querySelector('.usuario-wrapper').classList.toggle('has-data', availableUsuarios.length > 0);
+                    console.log("DEBUG: Usuarios cargados:", availableUsuarios.length);
+                }
+                if (dataP.success) {
+                    availablePuestos = dataP.data;
+                    document.querySelector('.puesto-wrapper').classList.toggle('has-data', availablePuestos.length > 0);
+                    console.log("DEBUG: Puestos cargados:", availablePuestos.length);
+                }
+                if (dataA.success) {
+                    availableAreas = dataA.data;
+                    document.querySelector('.area-wrapper').classList.toggle('has-data', availableAreas.length > 0);
+                    console.log("DEBUG: Áreas cargadas:", availableAreas.length);
+                }
+
+                if (force) {
+                    Swal.close();
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Sincronizado',
+                        text: 'Los datos han sido actualizados.',
+                        timer: 2000,
+                        showConfirmButton: false,
+                        background: '#1a1a20',
+                        color: '#fff'
+                    });
+                }
+            } catch (err) {
+                console.error("Error fetching sales data:", err);
+                if (force) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'No se pudo sincronizar con Notion.',
+                        background: '#1a1a20',
+                        color: '#fff'
+                    });
+                }
+            } finally {
+                if (refreshBtn) refreshBtn.disabled = false;
+                if (refreshIcon) refreshIcon.classList.remove('ph-spin');
+            }
+        }
+
+        // Initialize Dropdowns
+        const clienteInput = document.getElementById('cliente');
+        const usuarioInput = document.getElementById('usuarioCliente');
+        const cotizadoInput = document.getElementById('cotizadoComo');
+        const monedaInput = document.getElementById('moneda');
+        const puestoInput = document.getElementById('puesto');
+        const areaInput = document.getElementById('area');
+
+        if (clienteInput) initCustomDropdown(clienteInput, () => availableClientes);
+        if (usuarioInput) initCustomDropdown(usuarioInput, () => availableUsuarios);
+        if (puestoInput) initCustomDropdown(puestoInput, () => availablePuestos);
+        if (areaInput) initCustomDropdown(areaInput, () => availableAreas);
+        if (cotizadoInput) {
+            initCustomDropdown(cotizadoInput, ['DMR', 'JOSÉ DE JESÚS', 'INVERSA']);
+            cotizadoInput.value = 'DMR'; // Default
+        }
+        if (monedaInput) {
+            initCustomDropdown(monedaInput, ['MXN', 'USD']);
+            monedaInput.value = 'MXN'; // Default
+        }
+
+        // Event for Refresh Button
+        document.getElementById('refreshBtn')?.addEventListener('click', () => fetchSalesData(true));
+
+        fetchSalesData();
+
         document.getElementById('quotationForm').addEventListener('submit', async function (e) {
             e.preventDefault();
 
@@ -531,17 +717,17 @@
             try {
                 // Collect Header Data
                 const headerData = {
-                    cotizado_como: document.getElementById('cotizadoComo').value,
-                    no_requisicion: document.getElementById('noRequisicion').value,
-                    no_parte: document.getElementById('noParte').value,
+                    cotizado_como: document.getElementById('cotizadoComo').value.toUpperCase(),
+                    no_requisicion: document.getElementById('noRequisicion').value.toUpperCase(),
+                    no_parte: document.getElementById('noParte').value.toUpperCase(),
                     fecha_emision: document.getElementById('fechaEmision').value,
                     fecha_entrega: document.getElementById('fechaEntrega').value,
-                    moneda: document.getElementById('moneda').value,
-                    cliente: document.getElementById('cliente').value,
-                    usuario_cliente: document.getElementById('usuarioCliente').value,
+                    moneda: document.getElementById('moneda').value.toUpperCase(),
+                    cliente: document.getElementById('cliente').value.toUpperCase(),
+                    usuario_cliente: document.getElementById('usuarioCliente').value.toUpperCase(),
                     condiciones_pago: document.getElementById('condicionesPago').value,
-                    puesto: document.getElementById('puesto').value,
-                    area: document.getElementById('area').value,
+                    puesto: document.getElementById('puesto').value.toUpperCase(),
+                    area: document.getElementById('area').value.toUpperCase(),
                     vigencia: document.getElementById('vigencia').value
                 };
 
@@ -556,9 +742,9 @@
                     if (desc && (price > 0 || qty > 0)) {
                         items.push({
                             lot: index + 1,
-                            descripcion: desc,
+                            descripcion: desc.toUpperCase(),
                             cantidad: qty,
-                            um: row.querySelector('.um-input').value,
+                            um: row.querySelector('.um-input').value.toUpperCase(),
                             precio_unitario: price,
                             total: qty * price
                         });

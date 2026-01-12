@@ -707,3 +707,143 @@ footer p {
         padding: 2rem 1.5rem;
     }
 }
+
+/* Custom Dropdowns */
+.select-wrapper {
+    position: relative;
+    width: 100%;
+    z-index: 10;
+}
+
+.select-wrapper:focus-within {
+    z-index: 100;
+}
+
+.select-wrapper::after {
+    content: "\f107";
+    font-family: "Phosphor";
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-secondary);
+    pointer-events: none;
+    font-size: 1rem;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.select-wrapper.has-data::after {
+    opacity: 1;
+}
+
+.dropdown-menu {
+    position: fixed;
+    background: #1a1a20;
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    max-height: 250px;
+    overflow-y: auto;
+    z-index: 9999;
+    display: none;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    pointer-events: all;
+    min-width: 150px;
+}
+
+.dropdown-menu.active {
+    display: block;
+}
+
+.dropdown-item {
+    padding: 0.8rem 1rem;
+    color: white;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background 0.2s;
+    white-space: nowrap;
+}
+
+.dropdown-item:hover,
+.dropdown-item.selected {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--accent-primary);
+}
+
+.dropdown-item mark {
+    background: transparent;
+    color: var(--accent-primary);
+    font-weight: 600;
+}
+
+.dropdown-menu::-webkit-scrollbar {
+    width: 8px;
+}
+
+.dropdown-menu::-webkit-scrollbar-track {
+    background: #1a1a20;
+}
+
+.dropdown-menu::-webkit-scrollbar-thumb {
+    background: #3f3f46;
+    border-radius: 4px;
+}
+
+.dropdown-menu::-webkit-scrollbar-thumb:hover {
+    background: #52525b;
+}
+
+/* Quantity Controls */
+.quantity-wrapper {
+    display: flex;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+    padding: 2px;
+    min-width: 90px;
+    width: fit-content;
+}
+
+.quantity-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 4px 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s, background 0.2s;
+    border-radius: 4px;
+}
+
+.quantity-btn:hover {
+    color: white;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.quantity-input {
+    width: 40px !important;
+    text-align: center;
+    padding: 0.4rem 0.2rem !important;
+    appearance: none;
+    -moz-appearance: textfield;
+}
+
+.quantity-input::-webkit-outer-spin-button,
+.quantity-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+/* Price Input Spinners */
+.price-input {
+    appearance: textfield;
+    -moz-appearance: textfield;
+}
+
+.price-input::-webkit-outer-spin-button,
+.price-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}

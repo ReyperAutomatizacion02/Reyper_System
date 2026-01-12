@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Accesorios y Tornillería | AutoIntelli</title>
+    <link rel="icon" href="{{ url_for('static', filename='images/logo.svg') }}" type="image/svg+xml">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        .capture-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .items-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin-top: 1rem;
+        }
+
+        .items-table th {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 1rem;
+            text-align: left;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        .items-table td {
+            background: rgba(255, 255, 255, 0.01);
+            border-bottom: 1px solid var(--glass-border);
+            padding: 0.5rem;
+            vertical-align: middle;
+        }
+
+        .table-input {
+            width: 100%;
+            background: transparent;
+            border: none;
+            color: white;
+            padding: 0.8rem 0.5rem;
+            outline: none;
+            font-family: inherit;
+            font-size: 0.9rem;
+        }
+
+        .table-input:focus {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+        }
+
+        .action-bar {
+            margin-top: 1rem;
+            display: flex;
+            gap: 1rem;
+        }
+    </style>
+</head>
+
+<body style="background-image: none; background-color: var(--bg-color);">
+    <div class="dashboard-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="{{ url_for('main.dashboard') }}" class="logo" style="justify-content: center;">
+                    <img src="{{ url_for('static', filename='images/logo.svg') }}" alt="Reyper System">
+                </a>
+                <button class="sidebar-toggle-btn" id="sidebar-collapse-btn" title="Contraer/Expandir">
+                    <i class="ph ph-caret-left"></i>
+                </button>
+            </div>
+
+            <ul class="sidebar-menu">
+                <li class="menu-item">
+                    <a href="{{ url_for('main.dashboard') }}" class="menu-link">
+                        <i class="ph ph-squares-four"></i> <span>Menú Principal</span>
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="{{ url_for('design.home') }}" class="menu-link">
+                        <i class="ph ph-pencil-line"></i> <span>Panel Diseño</span>
+                    </a>
+                </li>
+
+                <li
+                    style="margin: 1.5rem 0 0.5rem 1rem; font-size: 0.75rem; text-transform: uppercase; color: var(--text-secondary); letter-spacing: 0.05em;">
+                    Herramientas</li>
+
+                {% for tool in tools %}
+                <li class="menu-item">
+                    <a href="{{ url_for(tool.route) }}"
+                        class="menu-link {{ 'active' if tool.name == 'accesorios' else '' }}">
+                        <i class="ph {{ tool.icon }}"></i> <span>{{ tool.label }}</span>
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+
+            <div class="sidebar-footer">
+                <a href="{{ url_for('auth.logout') }}" class="menu-link" style="color: #ef4444;">
+                    <i class="ph ph-sign-out"></i> <span>Cerrar Sesión</span>
+                </a>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="top-bar" style="justify-content: space-between;">
+                <button class="mobile-menu-toggle" id="dashboard-toggle">
+                    <i class="ph ph-list"></i>
+                </button>
+                <h1>Accesorios y Tornillería</h1>
+
+                <div class="user-info"
+                    style="display: flex; align-items: center; gap: 1rem; color: var(--text-primary); margin-left: auto;">
+                    <div style="text-align: right;">
+                        <div style="font-weight: 600;">{{ user.username or user.email }}</div>
+                        <div style="font-size: 0.8rem; margin-top: 2px;">
+                            {% if roles %}
+                            {% for role in roles %}
+                            <span
+                                style="background: var(--accent-primary); padding: 2px 6px; border-radius: 4px; margin-left: 4px; font-size: 0.7rem;">{{
+                                role }}</span>
+                            {% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div
+                        style="width: 40px; height: 40px; background: rgba(255,255,255,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                        <i class="ph ph-user"></i>
+                    </div>
+                </div>
+            </div>
+
+            <form id="captureForm">
+                <div class="capture-card">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                        <h3 style="color: var(--accent-primary);">Lista de Requerimientos</h3>
+                        <button type="button" class="btn-secondary" onclick="addRow()">
+                            <i class="ph ph-plus"></i> Agregar Fila
+                        </button>
+                    </div>
+
+                    <div style="overflow-x: auto;">
+                        <table class="items-table" id="itemsTable">
+                            <thead>
+                                <tr>
+                                    <th style="width: 80px; text-align: center;">Item</th>
+                                    <th>Descripción del Accesorio / Tornillería</th>
+                                    <th style="width: 120px; text-align: center;">Cantidad</th>
+                                    <th style="width: 50px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div style="text-align: right;">
+                    <button type="submit" class="btn-primary" id="submitBtn">
+                        <i class="ph ph-paper-plane-right"></i> Enviar Solicitud
+                    </button>
+                </div>
+            </form>
+        </main>
+    </div>
+
+    <script>
+        function updateLotNumbers() {
+            const rows = document.querySelectorAll('#itemsTable tbody tr');
+            rows.forEach((row, index) => {
+                const lotInput = row.querySelector('.lot-input');
+                if (lotInput) lotInput.value = index + 1;
+            });
+        }
+
+        function addRow() {
+            const tbody = document.querySelector('#itemsTable tbody');
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>
+                    <input type="text" class="table-input lot-input" readonly style="text-align: center; background: rgba(255,255,255,0.03); border-radius: 4px;">
+                </td>
+                <td>
+                    <input type="text" class="table-input desc-input" placeholder="Ej. Tornillo Allen M6 x 20mm" required>
+                </td>
+                <td>
+                    <div class="quantity-wrapper" style="display: flex; align-items: center; background: rgba(255,255,255,0.05); border-radius: 8px; padding: 2px;">
+                        <button type="button" class="quantity-btn minus-btn" style="background: none; border: none; color: white; cursor: pointer; padding: 8px; display: flex; align-items: center;"><i class="ph ph-minus"></i></button>
+                        <input type="number" class="table-input qty-input quantity-input" value="1" min="1" style="text-align: center; padding: 5px;">
+                        <button type="button" class="quantity-btn plus-btn" style="background: none; border: none; color: white; cursor: pointer; padding: 8px; display: flex; align-items: center;"><i class="ph ph-plus"></i></button>
+                    </div>
+                </td>
+                <td>
+                    <div style="color: #ef4444; cursor: pointer; text-align: center; padding: 8px;" onclick="deleteRow(this)">
+                        <i class="ph ph-trash"></i>
+                    </div>
+                </td>
+            `;
+
+            // Quantity Logic
+            const qtyInput = tr.querySelector('.qty-input');
+            tr.querySelector('.minus-btn').onclick = () => {
+                if (parseInt(qtyInput.value) > 1) qtyInput.value = parseInt(qtyInput.value) - 1;
+            };
+            tr.querySelector('.plus-btn').onclick = () => {
+                qtyInput.value = parseInt(qtyInput.value) + 1;
+            };
+
+            tbody.appendChild(tr);
+            updateLotNumbers();
+        }
+
+        function deleteRow(btn) {
+            const tbody = document.querySelector('#itemsTable tbody');
+            if (tbody.children.length > 1) {
+                btn.closest('tr').remove();
+                updateLotNumbers();
+            } else {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Atención',
+                    text: 'Debe haber al menos una partida.',
+                    background: '#1a1a20',
+                    color: '#fff'
+                });
+            }
+        }
+
+        // Initialize with one row
+        addRow();
+
+        document.getElementById('captureForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('submitBtn');
+            const originalContent = btn.innerHTML;
+
+            const rows = document.querySelectorAll('#itemsTable tbody tr');
+            const items = Array.from(rows).map(row => ({
+                item: row.querySelector('.lot-input').value,
+                descripcion: row.querySelector('.desc-input').value,
+                cantidad: row.querySelector('.qty-input').value
+            }));
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="ph ph-spinner ph-spin"></i> Enviando...';
+
+            try {
+                const response = await fetch("{{ url_for('design.submit_accessories') }}", {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ items: items })
+                });
+                const result = await response.json();
+
+                if (result.success) {
+                    await Swal.fire({
+                        icon: 'success',
+                        title: '¡Éxito!',
+                        text: result.message,
+                        background: '#1a1a20',
+                        color: '#fff'
+                    });
+                    document.querySelector('#itemsTable tbody').innerHTML = '';
+                    addRow();
+                } else {
+                    throw new Error(result.message);
+                }
+            } catch (error) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: error.message,
+                    background: '#1a1a20',
+                    color: '#fff'
+                });
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalContent;
+            }
+        };
+    </script>
+    <script src="{{ url_for('static', filename='js/sidebar.js') }}"></script>
+</body>
+
+</html>

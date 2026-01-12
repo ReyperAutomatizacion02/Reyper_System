@@ -40,18 +40,22 @@ def load_user(user_id):
         return None
     return None
 
-# Register Blueprints
+from routes.design import design_bp
+
 app.register_blueprint(auth_bp)
 app.register_blueprint(main_bp)
 app.register_blueprint(sales_bp)
 app.register_blueprint(admin_bp)
 app.register_blueprint(logistics_bp)
+app.register_blueprint(design_bp)
 
-# Iniciar sincronización de segundo plano para Logística
+# Iniciar sincronización de segundo plano para Logística y Ventas
 from routes.logistics import start_background_sync
+from routes.sales import start_sales_sync
 # En producción o cuando no es el reloader de Flask
 if os.environ.get('WERKZEUG_RUN_MAIN') == 'true' or not app.debug:
     start_background_sync()
+    start_sales_sync()
 
 if __name__ == '__main__':
     app.run(debug=True)
