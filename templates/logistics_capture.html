@@ -40,6 +40,11 @@
             border-bottom: 1px solid var(--glass-border);
             padding: 0.5rem;
             vertical-align: middle;
+            position: relative;
+        }
+
+        .items-table td:focus-within {
+            z-index: 100;
         }
 
         .table-input {
@@ -78,7 +83,37 @@
             gap: 1rem;
         }
 
-        /* Ocultar flechas de input number */
+        :root {
+            color-scheme: dark;
+        }
+
+        /* Scrollbar personalizado */
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #1a1a20;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #3f3f46;
+            border-radius: 10px;
+            border: 2px solid #1a1a20;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #52525b;
+        }
+
+        /* Firefox */
+        * {
+            scrollbar-width: thin;
+            scrollbar-color: #3f3f46 #1a1a20;
+        }
+
+        /* Ocultar flechas de input number por defecto */
         input::-webkit-outer-spin-button,
         input::-webkit-inner-spin-button {
             -webkit-appearance: none;
@@ -87,6 +122,135 @@
 
         input[type=number] {
             -moz-appearance: textfield;
+        }
+
+
+
+        .select-wrapper {
+            position: relative;
+            width: 100%;
+            z-index: 10;
+        }
+
+        .select-wrapper:focus-within {
+            z-index: 100;
+        }
+
+        .select-wrapper::after {
+            content: "\f107";
+            font-family: "Phosphor";
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+            pointer-events: none;
+            font-size: 1rem;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .select-wrapper.has-data::after {
+            opacity: 1;
+        }
+
+        .quantity-wrapper {
+            display: flex;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 6px;
+            padding: 2px;
+            min-width: 90px;
+        }
+
+        .quantity-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 4px 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.2s, background 0.2s;
+            border-radius: 4px;
+        }
+
+        .quantity-btn:hover {
+            color: white;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .quantity-input {
+            width: 40px !important;
+            text-align: center;
+            padding: 0.4rem 0.2rem !important;
+            appearance: textfield;
+            -moz-appearance: textfield;
+        }
+
+        .dropdown-menu {
+            position: fixed;
+            background: #1a1a20;
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            max-height: 250px;
+            overflow-y: auto;
+            z-index: 9999;
+            display: none;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            pointer-events: all;
+            min-width: 150px;
+        }
+
+        .dropdown-menu.active {
+            display: block;
+        }
+
+        .dropdown-item {
+            padding: 0.8rem 1rem;
+            color: white;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background 0.2s;
+            white-space: nowrap;
+        }
+
+        .dropdown-item:hover,
+        .dropdown-item.selected {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--accent-primary);
+        }
+
+        .dropdown-item mark {
+            background: transparent;
+            color: var(--accent-primary);
+            font-weight: 600;
+        }
+
+        /* Scrollbar específico para el dropdown para asegurar que se vea bien */
+        .dropdown-menu::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .dropdown-menu::-webkit-scrollbar-track {
+            background: #1a1a20;
+        }
+
+        .dropdown-menu::-webkit-scrollbar-thumb {
+            background: #3f3f46;
+            border-radius: 4px;
+        }
+
+        .dropdown-menu::-webkit-scrollbar-thumb:hover {
+            background: #52525b;
+        }
+
+        /* Ocultar flechas de input number por defecto */
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
         }
     </style>
 </head>
@@ -98,21 +262,23 @@
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <a href="{{ url_for('main.dashboard') }}" class="logo" style="justify-content: center;">
-                    <img src="{{ url_for('static', filename='images/logo.svg') }}" alt="Reyper System"
-                        style="height: 45px; width: auto;">
+                    <img src="{{ url_for('static', filename='images/logo.svg') }}" alt="Reyper System">
                 </a>
+                <button class="sidebar-toggle-btn" id="sidebar-collapse-btn" title="Contraer/Expandir">
+                    <i class="ph ph-caret-left"></i>
+                </button>
                 <i class="ph ph-x sidebar-close" id="sidebar-close" style="display:none;"></i>
             </div>
 
             <ul class="sidebar-menu">
                 <li class="menu-item">
                     <a href="{{ url_for('main.dashboard') }}" class="menu-link">
-                        <i class="ph ph-squares-four"></i> Menú Principal
+                        <i class="ph ph-squares-four"></i> <span>Menú Principal</span>
                     </a>
                 </li>
                 <li class="menu-item">
                     <a href="{{ url_for('logistics.home') }}" class="menu-link">
-                        <i class="ph ph-truck"></i> Panel Logística
+                        <i class="ph ph-truck"></i> <span>Panel Logística</span>
                     </a>
                 </li>
 
@@ -124,15 +290,15 @@
                 <li class="menu-item">
                     <a href="{{ url_for(tool.route) }}"
                         class="menu-link {{ 'active' if tool.name == 'captura' else '' }}">
-                        <i class="ph {{ tool.icon }}"></i> {{ tool.label }}
+                        <i class="ph {{ tool.icon }}"></i> <span>{{ tool.label }}</span>
                     </a>
                 </li>
                 {% endfor %}
             </ul>
 
-            <div style="margin-top: auto;">
+            <div class="sidebar-footer">
                 <a href="{{ url_for('auth.logout') }}" class="menu-link" style="color: #ef4444;">
-                    <i class="ph ph-sign-out"></i> Cerrar Sesión
+                    <i class="ph ph-sign-out"></i> <span>Cerrar Sesión</span>
                 </a>
             </div>
         </aside>
@@ -205,14 +371,6 @@
                     </div>
                 </div>
 
-                <!-- Datalist for Partidas -->
-                <datalist id="partidasList"></datalist>
-
-                <!-- Datalist for Materiales -->
-                <datalist id="materialesList"></datalist>
-
-                <!-- Datalist for Standard Inches (Static Global) -->
-                <datalist id="standardInchesList"></datalist>
 
                 <div
                     style="text-align: right; display: flex; justify-content: flex-end; align-items: center; gap: 1rem;">
@@ -256,10 +414,11 @@
                 const response = await fetch(url);
                 const result = await response.json();
                 if (result.success) {
-                    availablePartidas = result.partidas;
-                    updateDatalist();
+                    availablePartidas.splice(0, availablePartidas.length, ...result.partidas);
+                    updateDropdowns();
 
                     if (result.is_syncing && availablePartidas.length === 0) {
+
                         document.getElementById('syncTime').textContent = `Sincronizando por primera vez...`;
                         // Reintentar en 5 segundos si está vacío y sincronizando
                         setTimeout(() => fetchPartidas(), 5000);
@@ -319,10 +478,11 @@
                 const response = await fetch("{{ url_for('logistics.get_materiales') }}");
                 const result = await response.json();
                 if (result.success) {
-                    availableMateriales = result.materiales;
-                    updateMaterialesDatalist();
+                    availableMateriales.splice(0, availableMateriales.length, ...result.materiales);
+                    updateDropdowns();
 
                     if (result.is_syncing && availableMateriales.length === 0) {
+
                         // Si está sincronizando y no hay datos, reintentar en 5s
                         setTimeout(() => fetchMateriales(), 5000);
                     }
@@ -332,48 +492,194 @@
             }
         }
 
-        function updateDatalist() {
-            const list = document.getElementById('partidasList');
-            list.innerHTML = availablePartidas.map(p => `<option value="${p}">`).join('');
-        }
-
-        function updateMaterialesDatalist() {
-            const list = document.getElementById('materialesList');
-            list.innerHTML = availableMateriales.map(m => `<option value="${m}">`).join('');
-        }
-
-        // Poblar el datalist global de pulgadas una sola vez
-        function populateStandardInches() {
-            const list = document.getElementById('standardInchesList');
-            if (list) {
-                list.innerHTML = STANDARD_INCHES.map(i => `<option value="${i}">`).join('');
+        function updateDropdowns() {
+            // Ya no usamos datalists nativos, los datos están en availablePartidas y availableMateriales
+            if (availablePartidas.length > 0) {
+                document.querySelectorAll('.partida-wrapper').forEach(el => el.classList.add('has-data'));
+            }
+            if (availableMateriales.length > 0) {
+                document.querySelectorAll('.material-wrapper').forEach(el => el.classList.add('has-data'));
             }
         }
-        populateStandardInches();
+
+        function initCustomDropdown(input, itemsOrFn, wrapperClass) {
+            const wrapper = input.closest('.select-wrapper');
+            if (input.dataset.dropdownInit) return;
+            input.dataset.dropdownInit = 'true';
+
+            let dropdown = wrapper.querySelector('.dropdown-menu');
+            if (!dropdown) {
+                dropdown = document.createElement('div');
+                dropdown.className = 'dropdown-menu';
+                // Link dropdown to input for closing logic
+                dropdown.associatedInput = input;
+                // Append to body to avoid clipping issues with parent overflows
+                document.body.appendChild(dropdown);
+            }
+
+            let currentIndex = -1;
+
+            const getItems = () => {
+                if (typeof itemsOrFn === 'function') return itemsOrFn();
+                return itemsOrFn;
+            };
+
+            const updatePosition = () => {
+                if (!dropdown.classList.contains('active')) return;
+                const rect = input.getBoundingClientRect();
+                dropdown.style.minWidth = `${rect.width}px`;
+                dropdown.style.width = 'auto';
+
+                let left = rect.left;
+                // Ensure it doesn't go off-screen on the right
+                if (left + dropdown.offsetWidth > window.innerWidth) {
+                    left = window.innerWidth - dropdown.offsetWidth - 10;
+                }
+
+                dropdown.style.left = `${Math.max(10, left)}px`;
+                dropdown.style.top = `${rect.bottom + 4}px`;
+            };
+
+            const renderItems = (filter = '') => {
+                const items = getItems();
+                if (!items || items.length === 0) {
+                    dropdown.classList.remove('active');
+                    return;
+                }
+
+                const filtered = items.filter(item =>
+                    String(item).toLowerCase().includes(String(filter).toLowerCase())
+                ).slice(0, 50);
+
+                if (filtered.length === 0) {
+                    dropdown.classList.remove('active');
+                    return;
+                }
+
+                dropdown.innerHTML = filtered.map((item, index) => {
+                    if (!filter) return `<div class="dropdown-item" data-value="${item}">${item}</div>`;
+                    const regex = new RegExp(`(${filter.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+                    const highlighted = String(item).replace(regex, '<mark>$1</mark>');
+                    return `<div class="dropdown-item" data-value="${item}">${highlighted}</div>`;
+                }).join('');
+
+                dropdown.classList.add('active');
+                updatePosition();
+                currentIndex = -1;
+            };
+
+            input.addEventListener('input', (e) => renderItems(e.target.value));
+
+            const handleFocusClick = (e) => {
+                const val = input.readOnly ? '' : input.value;
+                if (!dropdown.classList.contains('active')) renderItems(val);
+            };
+
+            input.addEventListener('focus', handleFocusClick);
+            input.addEventListener('click', handleFocusClick);
+
+            // Update position on scroll/resize
+            window.addEventListener('scroll', updatePosition, true);
+            window.addEventListener('resize', updatePosition);
+
+            input.addEventListener('keydown', (e) => {
+                const results = dropdown.querySelectorAll('.dropdown-item');
+                if (!dropdown.classList.contains('active')) {
+                    if (e.key === 'ArrowDown') renderItems(input.value);
+                    return;
+                }
+
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    currentIndex = Math.min(currentIndex + 1, results.length - 1);
+                    updateSelection(results);
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    currentIndex = Math.max(currentIndex - 1, -1);
+                    updateSelection(results);
+                } else if (e.key === 'Enter') {
+                    if (currentIndex >= 0 && results[currentIndex]) {
+                        e.preventDefault();
+                        selectItem(results[currentIndex].dataset.value);
+                    }
+                } else if (e.key === 'Escape') {
+                    dropdown.classList.remove('active');
+                }
+            });
+
+            function updateSelection(results) {
+                results.forEach((el, i) => {
+                    el.classList.toggle('selected', i === currentIndex);
+                    if (i === currentIndex) el.scrollIntoView({ block: 'nearest' });
+                });
+            }
+
+            function selectItem(val) {
+                input.value = val;
+                dropdown.classList.remove('active');
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+                input.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+
+            dropdown.addEventListener('click', (e) => {
+                const item = e.target.closest('.dropdown-item');
+                if (item) {
+                    selectItem(item.dataset.value);
+                }
+            });
+        }
+
+        // Delegated listener for closing all dropdowns
+        document.addEventListener('mousedown', (e) => {
+            const activeDropdowns = document.querySelectorAll('.dropdown-menu.active');
+            activeDropdowns.forEach(dropdown => {
+                const input = dropdown.associatedInput;
+                const wrapper = input ? input.closest('.select-wrapper') : null;
+
+                // Close if click is outside BOTH the dropdown AND its trigger wrapper/input
+                if (wrapper && !wrapper.contains(e.target) && !dropdown.contains(e.target)) {
+                    dropdown.classList.remove('active');
+                }
+            });
+        });
 
         function addRow() {
             const tbody = document.querySelector('#itemsTable tbody');
             const tr = document.createElement('tr');
 
+            const partidaHasData = availablePartidas.length > 0 ? 'has-data' : '';
+            const materialHasData = availableMateriales.length > 0 ? 'has-data' : '';
+
             tr.innerHTML = `
                 <td>
-                    <input type="text" class="table-input partida-input" list="partidasList" placeholder="Buscar partida...">
+                    <div class="select-wrapper partida-wrapper ${partidaHasData}">
+                        <input type="text" class="table-input partida-input" placeholder="Buscar partida..." autocomplete="off">
+                    </div>
                 </td>
-                <td><input type="text" list="materialesList" class="table-input material-input" placeholder="Buscar material.." required></td>
+                <td>
+                    <div class="select-wrapper material-wrapper ${materialHasData}">
+                        <input type="text" class="table-input material-input" placeholder="Buscar material.." required autocomplete="off">
+                    </div>
+                </td>
                 <td>
                     <input type="text" class="table-input forma-input" readonly placeholder="-" style="background: rgba(255,255,255,0.05); text-align: center; font-size: 0.75rem;">
                 </td>
-                <td><input type="number" class="table-input cantidad-input" value="1" min="1"></td>
                 <td>
-                    <select class="table-input um-input">
-                        <option value="mm">mm</option>
-                        <option value="in">in</option>
-                    </select>
+                    <div class="quantity-wrapper">
+                        <button type="button" class="quantity-btn minus-btn"><i class="ph ph-minus"></i></button>
+                        <input type="number" class="table-input cantidad-input quantity-input" value="1" min="1">
+                        <button type="button" class="quantity-btn plus-btn"><i class="ph ph-plus"></i></button>
+                    </div>
                 </td>
-                <td><input type="text" class="table-input diametro-input" placeholder="0"></td>
-                <td><input type="text" class="table-input largo-input" placeholder="0"></td>
-                <td><input type="text" class="table-input ancho-input" placeholder="0"></td>
-                <td><input type="text" class="table-input alto-input" placeholder="0"></td>
+                <td>
+                    <div class="select-wrapper um-wrapper has-data">
+                        <input type="text" class="table-input um-input" value="mm" readonly autocomplete="off" style="cursor: pointer; text-align: center;">
+                    </div>
+                </td>
+                <td class="dim-cell"><div class="select-wrapper"><input type="text" class="table-input diametro-input" placeholder="0" autocomplete="off"></div></td>
+                <td class="dim-cell"><div class="select-wrapper"><input type="text" class="table-input largo-input" placeholder="0" autocomplete="off"></div></td>
+                <td class="dim-cell"><div class="select-wrapper"><input type="text" class="table-input ancho-input" placeholder="0" autocomplete="off"></div></td>
+                <td class="dim-cell"><div class="select-wrapper"><input type="text" class="table-input alto-input" placeholder="0" autocomplete="off"></div></td>
                 <td>
                     <div style="color: #ef4444; cursor: pointer; text-align: center;" onclick="deleteRow(this)">
                         <i class="ph ph-trash"></i>
@@ -381,54 +687,75 @@
                 </td>
             `;
 
-            // Agregar validación dinámica de dimensiones
-            const inputs = {
+            const partidaInput = tr.querySelector('.partida-input');
+            const materialInput = tr.querySelector('.material-input');
+            const umSelect = tr.querySelector('.um-input');
+            const dimInputs = {
                 diametro: tr.querySelector('.diametro-input'),
                 largo: tr.querySelector('.largo-input'),
                 ancho: tr.querySelector('.ancho-input'),
-                alto: tr.querySelector('.alto-input'),
-                forma: tr.querySelector('.forma-input')
+                alto: tr.querySelector('.alto-input')
             };
 
+            // Inicializar buscadores principales con getters para que siempre vean el array actualizado
+            initCustomDropdown(partidaInput, () => availablePartidas, 'partida-wrapper');
+            initCustomDropdown(materialInput, () => availableMateriales, 'material-wrapper');
+            initCustomDropdown(umSelect, ['mm', 'in'], 'um-wrapper');
+
+            // Inicializar buscadores de dimensiones con lógica de unidad integrada
+            Object.values(dimInputs).forEach(input => {
+                initCustomDropdown(input, () => {
+                    return umSelect.value === 'in' ? STANDARD_INCHES : [];
+                }, 'select-wrapper');
+            });
+
+            // Lógica de botones de cantidad
+            const qtyInput = tr.querySelector('.cantidad-input');
+            const minusBtn = tr.querySelector('.minus-btn');
+            const plusBtn = tr.querySelector('.plus-btn');
+
+            minusBtn.onclick = () => {
+                const val = parseInt(qtyInput.value) || 1;
+                if (val > 1) qtyInput.value = val - 1;
+            };
+
+            plusBtn.onclick = () => {
+                const val = parseInt(qtyInput.value) || 1;
+                qtyInput.value = val + 1;
+            };
+
+            // Agregar validación dinámica de dimensiones
             const validateDimensions = (e) => {
-                const hasDiam = parseFraction(inputs.diametro.value) > 0;
-                const hasAncho = parseFraction(inputs.ancho.value) > 0;
-                const hasAlto = parseFraction(inputs.alto.value) > 0;
+                const hasDiam = parseFraction(dimInputs.diametro.value) > 0;
+                const hasAncho = parseFraction(dimInputs.ancho.value) > 0;
+                const hasAlto = parseFraction(dimInputs.alto.value) > 0;
+                const formaInput = tr.querySelector('.forma-input');
 
                 if (hasDiam) {
-                    inputs.ancho.disabled = true;
-                    inputs.alto.disabled = true;
-                    inputs.ancho.style.opacity = '0.3';
-                    inputs.alto.style.opacity = '0.3';
-                    inputs.forma.value = 'Cilíndrica';
+                    dimInputs.ancho.disabled = true;
+                    dimInputs.alto.disabled = true;
+                    dimInputs.ancho.style.opacity = '0.3';
+                    dimInputs.alto.style.opacity = '0.3';
+                    formaInput.value = 'Cilíndrica';
                 } else if (hasAncho || hasAlto) {
-                    inputs.diametro.disabled = true;
-                    inputs.diametro.style.opacity = '0.3';
-                    inputs.forma.value = 'Prismática';
+                    dimInputs.diametro.disabled = true;
+                    dimInputs.diametro.style.opacity = '0.3';
+                    formaInput.value = 'Prismática';
                 } else {
-                    inputs.diametro.disabled = false;
-                    inputs.ancho.disabled = false;
-                    inputs.alto.disabled = false;
-                    inputs.diametro.style.opacity = '1';
-                    inputs.ancho.style.opacity = '1';
-                    inputs.alto.style.opacity = '1';
-                    inputs.forma.value = '-';
+                    dimInputs.diametro.disabled = false;
+                    dimInputs.ancho.disabled = false;
+                    dimInputs.alto.disabled = false;
+                    dimInputs.diametro.style.opacity = '1';
+                    dimInputs.ancho.style.opacity = '1';
+                    dimInputs.alto.style.opacity = '1';
+                    formaInput.value = '-';
                 }
             };
 
-            const umSelect = tr.querySelector('.um-input');
-            const dimInputs = [inputs.diametro, inputs.largo, inputs.ancho, inputs.alto];
-
-            // Toggle datalist based on unit
-            umSelect.addEventListener('change', (e) => {
-                const listId = e.target.value === 'in' ? 'standardInchesList' : '';
-                dimInputs.forEach(input => {
-                    input.setAttribute('list', listId);
-                });
-            });
+            const dimInputsList = Object.values(dimInputs);
 
             // Función para mover al siguiente input al seleccionar una opción de la lista
-            dimInputs.forEach((input, index) => {
+            dimInputsList.forEach((input, index) => {
                 input.addEventListener('input', (e) => {
                     // Restringir caracteres: solo números, / y espacios
                     const originalValue = e.target.value;
@@ -439,13 +766,10 @@
 
                     const val = e.target.value.trim();
                     if (umSelect.value === 'in' && STANDARD_INCHES.includes(val)) {
-                        // Si el valor coincide exactamente con una opción estándar, 
-                        // movemos el foco al siguiente input si existe
-                        const nextInput = dimInputs[index + 1];
+                        const nextInput = dimInputsList[index + 1];
                         if (nextInput && !nextInput.disabled) {
                             nextInput.focus();
                         } else {
-                            // Si no hay siguiente o está deshabilitado, quitamos el foco
                             e.target.blur();
                         }
                     }
@@ -526,40 +850,32 @@
                 const partida = partidaInput.value.trim();
                 const material = materialInput.value.trim();
                 const forma = formaInput.value;
-                const cantidad = parseFloat(row.querySelector('.cantidad-input').value) || 0;
-                const umSelect = row.querySelector('.um-input');
-                const um = umSelect ? umSelect.value : 'mm';
 
-                // Capturamos el texto original para enviarlo si es pulgadas
-                const diamInput = row.querySelector('.diametro-input');
-                const largoInput = row.querySelector('.largo-input');
-                const anchoInput = row.querySelector('.ancho-input');
-                const altoInput = row.querySelector('.alto-input');
-
-                const diamRaw = diamInput ? diamInput.value.trim() : '0';
-                const largoRaw = largoInput ? largoInput.value.trim() : '0';
-                const anchoRaw = anchoInput ? anchoInput.value.trim() : '0';
-                const altoRaw = altoInput ? altoInput.value.trim() : '0';
-
-                // Parseamos para validaciones internas
-                const diam = parseFraction(diamRaw);
-                const largo = parseFraction(largoRaw);
-                const ancho = parseFraction(anchoRaw);
-                const alto = parseFraction(altoRaw);
-
-                // Validaciones básicas
-                if (!partida || !material) {
+                if (!partida || !material || forma === '-') {
                     await Swal.fire({
-                        icon: 'error',
-                        title: 'Datos incompletos',
-                        text: 'Todas las filas deben tener Partida y Material.',
+                        icon: 'warning',
+                        title: 'Campos incompletos',
+                        text: 'Asegúrese de seleccionar partida, material y medidas válidas en todas las filas.',
                         background: '#1a1a20',
                         color: '#fff'
                     });
                     return;
                 }
 
-                // ... (validaciones de forma iguales)
+                // Obtener valores de medidas parseados
+                const diamRaw = row.querySelector('.diametro-input').value;
+                const largoRaw = row.querySelector('.largo-input').value;
+                const anchoRaw = row.querySelector('.ancho-input').value;
+                const altoRaw = row.querySelector('.alto-input').value;
+                const um = row.querySelector('.um-input').value;
+                const cantidad = parseInt(row.querySelector('.cantidad-input').value) || 1;
+
+                const diam = parseFraction(diamRaw);
+                const largo = parseFraction(largoRaw);
+                const ancho = parseFraction(anchoRaw);
+                const alto = parseFraction(altoRaw);
+
+                // Validaciones por forma
                 if (forma === 'Cilíndrica') {
                     if (diam <= 0 || largo <= 0) {
                         await Swal.fire({
@@ -583,6 +899,7 @@
                         return;
                     }
                 } else {
+                    // This case should ideally be caught by the initial `forma === '-'` check
                     await Swal.fire({
                         icon: 'error',
                         title: 'Faltan medidas',
@@ -609,8 +926,6 @@
             }
 
             if (items.length === 0) return;
-
-            console.log("Enviando items:", items); // Debug para el usuario en consola
 
             // Mostrar estado de carga en el botón
             const submitBtn = document.getElementById('submitBtn');
@@ -655,23 +970,15 @@
             }
         });
 
-        // Sidebar logic
-        const sidebar = document.getElementById('sidebar');
-        const dashToggle = document.getElementById('dashboard-toggle');
-        const closeBtn = document.getElementById('sidebar-close');
-        const overlay = document.getElementById('sidebar-overlay');
-
-        function toggleSidebar() {
-            if (sidebar) {
-                sidebar.classList.toggle('active');
-                if (overlay) overlay.classList.toggle('active');
+        // Event listener para evitar submit con Enter
+        document.getElementById('captureForm').addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' && e.target.tagName === 'INPUT') {
+                e.preventDefault();
+                return false;
             }
-        }
-
-        if (dashToggle) dashToggle.addEventListener('click', toggleSidebar);
-        if (closeBtn) closeBtn.addEventListener('click', toggleSidebar);
-        if (overlay) overlay.addEventListener('click', toggleSidebar);
+        });
     </script>
+    <script src="{{ url_for('static', filename='js/sidebar.js') }}"></script>
 </body>
 
 </html>

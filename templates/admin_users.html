@@ -100,18 +100,20 @@
 <body style="background-image: none; background-color: var(--bg-color);">
     <div class="dashboard-layout">
         <!-- Sidebar (Reused structure) -->
-        <aside class="sidebar">
+        <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <a href="{{ url_for('main.dashboard') }}" class="logo" style="justify-content: center;">
-                    <img src="{{ url_for('static', filename='images/logo.svg') }}" alt="Reyper System"
-                        style="height: 45px; width: auto;">
+                    <img src="{{ url_for('static', filename='images/logo.svg') }}" alt="Reyper System">
                 </a>
+                <button class="sidebar-toggle-btn" id="sidebar-collapse-btn" title="Contraer/Expandir">
+                    <i class="ph ph-caret-left"></i>
+                </button>
             </div>
             <ul class="sidebar-menu">
                 <li class="menu-item"><a href="{{ url_for('main.dashboard') }}" class="menu-link"><i
-                            class="ph ph-squares-four"></i> Inicio</a></li>
+                            class="ph ph-squares-four"></i> <span>Inicio</span></a></li>
                 <li class="menu-item"><a href="{{ url_for('admin.users') }}" class="menu-link active"
-                        style="color: #ef4444;"><i class="ph ph-users-three"></i> Usuarios</a></li>
+                        style="color: #ef4444;"><i class="ph ph-users-three"></i> <span>Usuarios</span></a></li>
                 <li
                     style="margin: 1.5rem 0 0.5rem 1rem; font-size: 0.75rem; text-transform: uppercase; color: var(--text-secondary);">
                     Módulos</li>
@@ -119,14 +121,14 @@
                 <li class="menu-item">
                     <!-- FIXED LINK -->
                     <a href="{{ url_for('sales.home') if mod.name == 'Ventas' else '#' }}" class="menu-link">
-                        <i class="ph {{ mod.icon }}"></i> {{ mod.label }}
+                        <i class="ph {{ mod.icon }}"></i> <span>{{ mod.label }}</span>
                     </a>
                 </li>
                 {% endfor %}
             </ul>
-            <div style="margin-top: auto;">
+            <div class="sidebar-footer">
                 <a href="{{ url_for('auth.logout') }}" class="menu-link" style="color: #ef4444;"><i
-                        class="ph ph-sign-out"></i> Cerrar Sesión</a>
+                        class="ph ph-sign-out"></i> <span>Cerrar Sesión</span></a>
             </div>
         </aside>
 
@@ -230,6 +232,7 @@
         </form>
     </dialog>
 
+    <script src="{{ url_for('static', filename='js/sidebar.js') }}"></script>
     <script>
         // Handle Flash Messages
         const flashData = document.getElementById('flash-messages').dataset.messages;
