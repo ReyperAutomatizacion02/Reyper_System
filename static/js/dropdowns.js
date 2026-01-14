@@ -44,9 +44,12 @@ function initCustomDropdown(input, itemsOrFn, wrapperClass) {
             return;
         }
 
-        const filtered = items.filter(item =>
-            String(item).toLowerCase().includes(String(filter).toLowerCase())
-        ).slice(0, 50);
+        const searchWords = String(filter).toLowerCase().trim().split(/\s+/).filter(word => word.length > 0);
+
+        const filtered = items.filter(item => {
+            const itemStr = String(item).toLowerCase();
+            return searchWords.every(word => itemStr.includes(word));
+        }).slice(0, 50);
 
         if (filtered.length === 0) {
             dropdown.classList.remove('active');
@@ -54,9 +57,13 @@ function initCustomDropdown(input, itemsOrFn, wrapperClass) {
         }
 
         dropdown.innerHTML = filtered.map((item, index) => {
-            if (!filter) return `<div class="dropdown-item" data-value="${item}">${item}</div>`;
-            const regex = new RegExp(`(${filter.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+            if (searchWords.length === 0) return `<div class="dropdown-item" data-value="${item}">${item}</div>`;
+
+            // Highlight each word individually
+            const escapedWords = searchWords.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+            const regex = new RegExp(`(${escapedWords.join('|')})`, 'gi');
             const highlighted = String(item).replace(regex, '<mark>$1</mark>');
+
             return `<div class="dropdown-item" data-value="${item}">${highlighted}</div>`;
         }).join('');
 

@@ -73,7 +73,7 @@ def refresh_notion_cache():
         one_year_ago = (today - timedelta(days=365)).strftime('%Y-%m-%d')
         one_year_ahead = (today + timedelta(days=365)).strftime('%Y-%m-%d')
 
-        url = f"https://api.notion.com/v1/databases/{database_id}/query"
+        url = f"https://api.notion.com/v1/databases/{database_id}/query?filter_properties=title"
         headers = {
             "Authorization": f"Bearer {token}",
             "Notion-Version": "2022-06-28",
@@ -125,11 +125,12 @@ def refresh_notion_cache():
         new_partidas.sort()
         PARTIDAS_CACHE['data'] = new_partidas
         PARTIDAS_CACHE['timestamp'] = datetime.now()
+        print(f"DEBUG: Sincronización de PARTIDAS completada. {len(new_partidas)} registros obtenidos.")
 
         # --- Sincronización de MATERIALES ---
         material_db_id = os.getenv('NOTION_DATABASE_ID_MATERIAL')
         if material_db_id:
-            url_mat = f"https://api.notion.com/v1/databases/{material_db_id}/query"
+            url_mat = f"https://api.notion.com/v1/databases/{material_db_id}/query?filter_properties=title"
             new_materiales = []
             has_more = True
             next_cursor = None
@@ -170,6 +171,7 @@ def refresh_notion_cache():
             new_materiales.sort()
             MATERIALES_CACHE['data'] = new_materiales
             MATERIALES_CACHE['timestamp'] = datetime.now()
+            print(f"DEBUG: Sincronización de MATERIALES completada. {len(new_materiales)} registros obtenidos.")
         
     except Exception as e:
         print(f"ERROR en sincronización de Notion: {str(e)}")

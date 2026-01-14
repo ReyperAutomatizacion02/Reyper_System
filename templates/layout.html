@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}AutoIntelli{% endblock %}</title>
+    <link rel="icon" href="{{ url_for('static', filename='images/logo.svg') }}" type="image/svg+xml">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    {% block extra_head %}{% endblock %}
+</head>
+
+<body style="background-image: none; background-color: var(--bg-color);">
+    <div class="dashboard-layout">
+        <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="{{ url_for('main.dashboard') }}" class="logo" style="justify-content: center;">
+                    <img src="{{ url_for('static', filename='images/logo.svg') }}" alt="Reyper System">
+                </a>
+                <button class="sidebar-toggle-btn" id="sidebar-collapse-btn" title="Contraer/Expandir">
+                    <i class="ph ph-caret-left"></i>
+                </button>
+                <i class="ph ph-x sidebar-close" id="sidebar-close" style="display:none;"></i>
+            </div>
+
+            <ul class="sidebar-menu">
+                <li class="menu-item">
+                    <a href="{{ url_for('main.dashboard') }}"
+                        class="menu-link {% if request.endpoint == 'main.dashboard' %}active{% endif %}">
+                        <i class="ph ph-squares-four"></i> <span>Menú Principal</span>
+                    </a>
+                </li>
+
+                {% block sidebar_nav %}{% endblock %}
+
+                <li
+                    style="margin: 1.5rem 0 0.5rem 1rem; font-size: 0.75rem; text-transform: uppercase; color: var(--text-secondary); letter-spacing: 0.05em;">
+                    Herramientas</li>
+
+                {% for tool in tools %}
+                <li class="menu-item">
+                    <a href="{{ url_for(tool.route) }}"
+                        class="menu-link {% if request.endpoint == tool.route %}active{% endif %}">
+                        <i class="ph {{ tool.icon }}"></i> <span>{{ tool.label }}</span>
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+
+            <div class="sidebar-footer">
+                <a href="{{ url_for('auth.logout') }}" class="menu-link" style="color: #ef4444;">
+                    <i class="ph ph-sign-out"></i> <span>Cerrar Sesión</span>
+                </a>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="top-bar" style="justify-content: space-between;">
+                <button class="mobile-menu-toggle" id="dashboard-toggle">
+                    <i class="ph ph-list"></i>
+                </button>
+                <h1>{% block page_title %}{% endblock %}</h1>
+
+                <div class="user-info"
+                    style="display: flex; align-items: center; gap: 1rem; color: var(--text-primary); margin-left: auto;">
+                    <div style="text-align: right;">
+                        <div style="font-weight: 600;">{{ user.username or user.email }}</div>
+                        {% if user.username %}
+                        <div style="font-size: 0.7rem; color: var(--text-secondary); margin-bottom: 2px;">{{ user.email
+                            }}</div>
+                        {% endif %}
+                        <div style="font-size: 0.8rem; margin-top: 2px;">
+                            {% if roles %}
+                            {% for role in roles %}
+                            <span
+                                style="background: var(--accent-primary); padding: 2px 6px; border-radius: 4px; margin-left: 4px; font-size: 0.7rem;">{{
+                                role }}</span>
+                            {% endfor %}
+                            {% else %}
+                            <span style="opacity: 0.7;">Sin rol</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div
+                        style="width: 40px; height: 40px; background: rgba(255,255,255,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                        <i class="ph ph-user"></i>
+                    </div>
+                </div>
+            </div>
+
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    <!-- Flash Messages Data -->
+    <div id="flash-messages" data-messages='{{ get_flashed_messages(with_categories=true) | tojson | safe }}'></div>
+
+    <script src="{{ url_for('static', filename='js/sidebar.js') }}"></script>
+    <script>
+        // Handle Flash Messages
+        const flashData = document.getElementById('flash-messages').dataset.messages;
+        const flashMessages = flashData ? JSON.parse(flashData) : [];
+        if (flashMessages && flashMessages.length > 0) {
+            flashMessages.forEach(msg => {
+                const category = msg[0];
+                const message = msg[1];
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: category === 'error' ? 'error' : 'success',
+                        title: category === 'error' ? 'Error' : 'Éxito',
+                        text: message,
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 4000,
+                        timerProgressBar: true,
+                        background: '#1a1a20',
+                        color: '#fff'
+                    });
+                }
+            });
+        }
+    </script>
+    {% block extra_scripts %}{% endblock %}
+</body>
+
+</html>

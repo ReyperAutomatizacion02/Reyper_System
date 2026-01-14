@@ -1,298 +1,675 @@
-<!DOCTYPE html>
-<html lang="es">
+{% extends "layout.html" %}
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Accesorios y Tornillería | AutoIntelli</title>
-    <link rel="icon" href="{{ url_for('static', filename='images/logo.svg') }}" type="image/svg+xml">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
-    <script src="https://unpkg.com/@phosphor-icons/web"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <style>
-        .capture-card {
-            background: rgba(255, 255, 255, 0.02);
-            border: 1px solid var(--glass-border);
-            border-radius: 12px;
-            padding: 2rem;
-            margin-bottom: 2rem;
-        }
+{% block title %}Accesorios y Tornillería | AutoIntelli{% endblock %}
 
-        .items-table {
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 0;
-            margin-top: 1rem;
-        }
+{% block extra_head %}
+<script src="{{ url_for('static', filename='js/dropdowns.js') }}"></script>
+<style>
+    .capture-card {
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid var(--glass-border);
+        border-radius: 12px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
 
-        .items-table th {
-            background: rgba(255, 255, 255, 0.05);
-            padding: 1rem;
-            text-align: left;
-            font-size: 0.85rem;
-            color: var(--text-secondary);
-            font-weight: 600;
-        }
+    .items-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        margin-top: 1rem;
+    }
 
-        .items-table td {
-            background: rgba(255, 255, 255, 0.01);
-            border-bottom: 1px solid var(--glass-border);
-            padding: 0.5rem;
-            vertical-align: middle;
-        }
+    .items-table th {
+        background: rgba(255, 255, 255, 0.05);
+        padding: 1rem;
+        text-align: left;
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+        font-weight: 600;
+    }
 
-        .table-input {
-            width: 100%;
-            background: transparent;
-            border: none;
-            color: white;
-            padding: 0.8rem 0.5rem;
-            outline: none;
-            font-family: inherit;
-            font-size: 0.9rem;
-        }
+    .items-table td {
+        background: rgba(255, 255, 255, 0.01);
+        border-bottom: 1px solid var(--glass-border);
+        padding: 0.5rem;
+        vertical-align: middle;
+    }
 
-        .table-input:focus {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 4px;
-        }
+    .table-input {
+        width: 100%;
+        background: transparent;
+        border: none;
+        color: white;
+        padding: 0.8rem 0.5rem;
+        outline: none;
+        font-family: inherit;
+        font-size: 0.9rem;
+    }
 
-        .action-bar {
-            margin-top: 1rem;
-            display: flex;
-            gap: 1rem;
-        }
-    </style>
-</head>
+    .table-input:focus {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 4px;
+    }
 
-<body style="background-image: none; background-color: var(--bg-color);">
-    <div class="dashboard-layout">
-        <!-- Sidebar -->
-        <aside class="sidebar" id="sidebar">
-            <div class="sidebar-header">
-                <a href="{{ url_for('main.dashboard') }}" class="logo" style="justify-content: center;">
-                    <img src="{{ url_for('static', filename='images/logo.svg') }}" alt="Reyper System">
-                </a>
-                <button class="sidebar-toggle-btn" id="sidebar-collapse-btn" title="Contraer/Expandir">
-                    <i class="ph ph-caret-left"></i>
-                </button>
-            </div>
+    .action-bar {
+        margin-top: 1rem;
+        display: flex;
+        gap: 1rem;
+    }
 
-            <ul class="sidebar-menu">
-                <li class="menu-item">
-                    <a href="{{ url_for('main.dashboard') }}" class="menu-link">
-                        <i class="ph ph-squares-four"></i> <span>Menú Principal</span>
-                    </a>
-                </li>
-                <li class="menu-item">
-                    <a href="{{ url_for('design.home') }}" class="menu-link">
-                        <i class="ph ph-pencil-line"></i> <span>Panel Diseño</span>
-                    </a>
-                </li>
+    .projects-panel {
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid var(--glass-border);
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
 
-                <li
-                    style="margin: 1.5rem 0 0.5rem 1rem; font-size: 0.75rem; text-transform: uppercase; color: var(--text-secondary); letter-spacing: 0.05em;">
-                    Herramientas</li>
+    .projects-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
 
-                {% for tool in tools %}
-                <li class="menu-item">
-                    <a href="{{ url_for(tool.route) }}"
-                        class="menu-link {{ 'active' if tool.name == 'accesorios' else '' }}">
-                        <i class="ph {{ tool.icon }}"></i> <span>{{ tool.label }}</span>
-                    </a>
-                </li>
-                {% endfor %}
-            </ul>
+    .projects-header h3 {
+        color: var(--accent-primary);
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
 
-            <div class="sidebar-footer">
-                <a href="{{ url_for('auth.logout') }}" class="menu-link" style="color: #ef4444;">
-                    <i class="ph ph-sign-out"></i> <span>Cerrar Sesión</span>
-                </a>
-            </div>
-        </aside>
+    .projects-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 1rem;
+        margin-top: 1rem;
+    }
 
-        <!-- Main Content -->
-        <main class="main-content">
-            <div class="top-bar" style="justify-content: space-between;">
-                <button class="mobile-menu-toggle" id="dashboard-toggle">
-                    <i class="ph ph-list"></i>
-                </button>
-                <h1>Accesorios y Tornillería</h1>
+    .project-card {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--glass-border);
+        border-radius: 8px;
+        padding: 1rem;
+        transition: all 0.3s ease;
+    }
 
-                <div class="user-info"
-                    style="display: flex; align-items: center; gap: 1rem; color: var(--text-primary); margin-left: auto;">
-                    <div style="text-align: right;">
-                        <div style="font-weight: 600;">{{ user.username or user.email }}</div>
-                        <div style="font-size: 0.8rem; margin-top: 2px;">
-                            {% if roles %}
-                            {% for role in roles %}
-                            <span
-                                style="background: var(--accent-primary); padding: 2px 6px; border-radius: 4px; margin-left: 4px; font-size: 0.7rem;">{{
-                                role }}</span>
-                            {% endfor %}
-                            {% endif %}
-                        </div>
-                    </div>
-                    <div
-                        style="width: 40px; height: 40px; background: rgba(255,255,255,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                        <i class="ph ph-user"></i>
-                    </div>
-                </div>
-            </div>
+    .project-card:hover {
+        background: rgba(255, 255, 255, 0.08);
+        border-color: var(--accent-primary);
+        transform: translateY(-2px);
+    }
 
-            <form id="captureForm">
-                <div class="capture-card">
-                    <div
-                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-                        <h3 style="color: var(--accent-primary);">Lista de Requerimientos</h3>
-                        <button type="button" class="btn-secondary" onclick="addRow()">
-                            <i class="ph ph-plus"></i> Agregar Fila
-                        </button>
-                    </div>
+    .project-card-header {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.5rem;
+    }
 
-                    <div style="overflow-x: auto;">
-                        <table class="items-table" id="itemsTable">
-                            <thead>
-                                <tr>
-                                    <th style="width: 80px; text-align: center;">Item</th>
-                                    <th>Descripción del Accesorio / Tornillería</th>
-                                    <th style="width: 120px; text-align: center;">Cantidad</th>
-                                    <th style="width: 50px;"></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <!-- JS -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+    .project-card-title {
+        font-weight: 600;
+        color: white;
+        font-size: 0.95rem;
+        margin: 0;
+    }
 
-                <div style="text-align: right;">
-                    <button type="submit" class="btn-primary" id="submitBtn">
-                        <i class="ph ph-paper-plane-right"></i> Enviar Solicitud
-                    </button>
-                </div>
-            </form>
-        </main>
+    .project-card-info {
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+        margin: 0.25rem 0;
+    }
+
+    .project-status {
+        display: inline-block;
+        padding: 0.25rem 0.5rem;
+        background: rgba(255, 193, 7, 0.1);
+        border: 1px solid rgba(255, 193, 7, 0.3);
+        border-radius: 4px;
+        font-size: 0.8rem;
+        color: #ffc107;
+        margin-top: 0.5rem;
+    }
+
+    .empty-projects {
+        text-align: center;
+        padding: 2rem;
+        color: var(--text-muted);
+    }
+</style>
+{% endblock %}
+
+{% block sidebar_nav %}
+<li class="menu-item">
+    <a href="{{ url_for('design.home') }}"
+        class="menu-link {% if request.endpoint == 'design.home' %}active{% endif %}">
+        <i class="ph ph-pencil-line"></i> <span>Panel Diseño</span>
+    </a>
+</li>
+{% endblock %}
+
+{% block page_title %}Accesorios y Tornillería{% endblock %}
+
+{% block content %}
+<!-- Projects Panel -->
+<div class="projects-panel">
+    <div class="projects-header">
+        <h3><i class="ph ph-folder-open"></i> Proyectos que Necesitan Material</h3>
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            <div id="projectsSyncTime" style="color: var(--text-muted); font-size: 0.8rem;"></div>
+            <button type="button" class="btn-secondary" id="refreshProjectsBtn" onclick="fetchProyectos(true)"
+                title="Sincronizar proyectos">
+                <i class="ph ph-arrows-clockwise"></i>
+            </button>
+        </div>
+    </div>
+    <div id="projectsGrid" class="projects-grid">
+        <!-- Projects will be loaded here by JavaScript -->
+    </div>
+</div>
+
+<form id="captureForm" novalidate>
+    <div class="capture-card" id="generalItemsCard">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <h3 style="color: var(--accent-primary);">Items Generales / Adicionales</h3>
+            <button type="button" class="btn-secondary" onclick="addRow('generalTableBody')">
+                <i class="ph ph-plus"></i> Agregar Fila General
+            </button>
+        </div>
+
+        <div class="table-container">
+            <table class="table table-dark table-hover items-table" id="generalTable">
+                <thead>
+                    <tr>
+                        <th style="width: 80px; text-align: center;">Item</th>
+                        <th style="width: 180px;">Partida</th>
+                        <th>Descripción del Accesorio / Tornillería</th>
+                        <th style="width: 120px; text-align: center;">Cantidad</th>
+                        <th style="width: 50px;"></th>
+                    </tr>
+                </thead>
+                <tbody id="generalTableBody">
+                    <!-- JS -->
+                </tbody>
+            </table>
+        </div>
     </div>
 
-    <script>
-        function updateLotNumbers() {
-            const rows = document.querySelectorAll('#itemsTable tbody tr');
-            rows.forEach((row, index) => {
-                const lotInput = row.querySelector('.lot-input');
-                if (lotInput) lotInput.value = index + 1;
+    <!-- Container for dynamic project sections -->
+    <div id="projectSectionsContainer" style="margin-top: 2rem;"></div>
+
+    <div
+        style="text-align: right; display: flex; justify-content: flex-end; align-items: center; gap: 1rem; margin-top: 2rem;">
+        <div id="syncTime" style="color: var(--text-muted); font-size: 0.8rem;"></div>
+        <div id="loadingStatus" style="color: var(--accent-primary); font-size: 0.9rem; display: none;">
+            <i class="ph ph-spinner ph-spin"></i> Sincronizando inventario...
+        </div>
+        <button type="button" class="btn-secondary" id="refreshBtn" onclick="fetchInventario(true)"
+            title="Sincronizar ahora">
+            <i class="ph ph-arrows-clockwise"></i> Recargar
+        </button>
+        <button type="submit" class="btn-primary" id="submitBtn">
+            <i class="ph ph-paper-plane-right"></i> Enviar Solicitud Total
+        </button>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // Update lot numbers globally or per table. Let's do per table for clarity.
+    function updateLotNumbers() {
+        // Update general table
+        updateTableLots('generalTableBody');
+
+        // Update all project tables
+        document.querySelectorAll('.project-tbody').forEach(tbody => {
+            updateTableLots(tbody.id);
+        });
+    }
+
+    function updateTableLots(tbodyId) {
+        const tbody = document.getElementById(tbodyId);
+        if (!tbody) return;
+        const rows = tbody.querySelectorAll('tr');
+        rows.forEach((row, index) => {
+            const lotInput = row.querySelector('.lot-input');
+            if (lotInput) lotInput.value = index + 1;
+        });
+    }
+
+    // Generic Add Row Function
+    function addRow(targetTbodyId = 'generalTableBody', filterCode = null) {
+        const tbody = document.getElementById(targetTbodyId);
+        if (!tbody) {
+            console.error(`Tbody ${targetTbodyId} not found`);
+            return;
+        }
+
+        const tr = document.createElement('tr');
+
+        // Data indicators
+        const partidaHasData = availablePartidas.length > 0 ? 'has-data' : '';
+        const descHasData = availableInventario.length > 0 ? 'has-data' : '';
+
+        tr.innerHTML = `
+            <td>
+                <input type="text" class="table-input lot-input" readonly style="text-align: center; background: rgba(255,255,255,0.03); border-radius: 4px;">
+            </td>
+            <td>
+                <div class="select-wrapper partida-wrapper ${partidaHasData}">
+                    <input type="text" class="table-input partida-input" placeholder="${filterCode ? 'Filtrado por ' + filterCode : 'Buscar partida...'}" autocomplete="off">
+                </div>
+            </td>
+            <td>
+                <div class="select-wrapper desc-wrapper ${descHasData}">
+                    <input type="text" class="table-input desc-input" placeholder="Ej. Tornillo Allen M6 x 20mm" required autocomplete="off">
+                </div>
+            </td>
+            <td>
+                <div class="quantity-wrapper" style="display: flex; align-items: center; background: rgba(255,255,255,0.05); border-radius: 8px; padding: 2px;">
+                    <button type="button" class="quantity-btn minus-btn" style="background: none; border: none; color: white; cursor: pointer; padding: 8px; display: flex; align-items: center;"><i class="ph ph-minus"></i></button>
+                    <input type="number" class="table-input qty-input quantity-input" value="1" min="1" style="text-align: center; padding: 5px;">
+                    <button type="button" class="quantity-btn plus-btn" style="background: none; border: none; color: white; cursor: pointer; padding: 8px; display: flex; align-items: center;"><i class="ph ph-plus"></i></button>
+                </div>
+            </td>
+            <td>
+                <div style="color: #ef4444; cursor: pointer; text-align: center; padding: 8px;" onclick="deleteRow(this)">
+                    <i class="ph ph-trash"></i>
+                </div>
+            </td>
+        `;
+
+        const partidaInput = tr.querySelector('.partida-input');
+        const descInput = tr.querySelector('.desc-input');
+
+        // Dynamic Filter Logic
+        let getDataFn;
+        if (filterCode) {
+            // If project is specified, return only matching items
+            getDataFn = () => availablePartidas.filter(p => p.startsWith(filterCode));
+        } else {
+            // General table uses full list
+            getDataFn = () => availablePartidas;
+        }
+
+        initCustomDropdown(partidaInput, getDataFn, 'partida-wrapper');
+        initCustomDropdown(descInput, () => availableInventario, 'desc-wrapper');
+
+        // Quantity Logic
+        const qtyInput = tr.querySelector('.qty-input');
+        tr.querySelector('.minus-btn').onclick = () => {
+            const val = parseInt(qtyInput.value) || 1;
+            if (val > 1) qtyInput.value = val - 1;
+        };
+        tr.querySelector('.plus-btn').onclick = () => {
+            const val = parseInt(qtyInput.value) || 1;
+            qtyInput.value = val + 1;
+        };
+
+        tbody.appendChild(tr);
+        updateTableLots(targetTbodyId); // Update specific table lots
+    }
+
+    function deleteRow(btn) {
+        const tr = btn.closest('tr');
+        const tbody = tr.parentElement;
+
+        // Allow deleting last row? User requirement "minimo de 1".
+        // Let's enforce min 1 row per section.
+        if (tbody.children.length > 1) {
+            tr.remove();
+            updateTableLots(tbody.id);
+        } else {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Atención',
+                text: 'Debe haber al menos una partida en esta sección.',
+                background: '#1a1a20',
+                color: '#fff',
+                timer: 2000,
+                showConfirmButton: false
             });
         }
+    }
 
-        function addRow() {
-            const tbody = document.querySelector('#itemsTable tbody');
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>
-                    <input type="text" class="table-input lot-input" readonly style="text-align: center; background: rgba(255,255,255,0.03); border-radius: 4px;">
-                </td>
-                <td>
-                    <input type="text" class="table-input desc-input" placeholder="Ej. Tornillo Allen M6 x 20mm" required>
-                </td>
-                <td>
-                    <div class="quantity-wrapper" style="display: flex; align-items: center; background: rgba(255,255,255,0.05); border-radius: 8px; padding: 2px;">
-                        <button type="button" class="quantity-btn minus-btn" style="background: none; border: none; color: white; cursor: pointer; padding: 8px; display: flex; align-items: center;"><i class="ph ph-minus"></i></button>
-                        <input type="number" class="table-input qty-input quantity-input" value="1" min="1" style="text-align: center; padding: 5px;">
-                        <button type="button" class="quantity-btn plus-btn" style="background: none; border: none; color: white; cursor: pointer; padding: 8px; display: flex; align-items: center;"><i class="ph ph-plus"></i></button>
-                    </div>
-                </td>
-                <td>
-                    <div style="color: #ef4444; cursor: pointer; text-align: center; padding: 8px;" onclick="deleteRow(this)">
-                        <i class="ph ph-trash"></i>
-                    </div>
-                </td>
-            `;
+    let availableInventario = [];
+    let availablePartidas = [];
+    let availableProyectos = [];
+    let proyectosRetryCount = 0;
+    const MAX_PROYECTOS_RETRIES = 10; // 50 segundos total
 
-            // Quantity Logic
-            const qtyInput = tr.querySelector('.qty-input');
-            tr.querySelector('.minus-btn').onclick = () => {
-                if (parseInt(qtyInput.value) > 1) qtyInput.value = parseInt(qtyInput.value) - 1;
-            };
-            tr.querySelector('.plus-btn').onclick = () => {
-                qtyInput.value = parseInt(qtyInput.value) + 1;
-            };
+    async function fetchProyectos(force = false) {
+        try {
+            const url = `{{ url_for('design.get_proyectos') }}${force ? '?force=true' : ''}`;
+            const response = await fetch(url);
+            const result = await response.json();
 
-            tbody.appendChild(tr);
-            updateLotNumbers();
-        }
+            console.log('Proyectos API response:', result);
 
-        function deleteRow(btn) {
-            const tbody = document.querySelector('#itemsTable tbody');
-            if (tbody.children.length > 1) {
-                btn.closest('tr').remove();
-                updateLotNumbers();
-            } else {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Atención',
-                    text: 'Debe haber al menos una partida.',
-                    background: '#1a1a20',
-                    color: '#fff'
-                });
-            }
-        }
+            if (result.success) {
+                availableProyectos = result.proyectos;
+                console.log('Projects loaded:', availableProyectos.length);
+                displayProyectos();
 
-        // Initialize with one row
-        addRow();
+                if (result.timestamp) {
+                    document.getElementById('projectsSyncTime').textContent = `Sincronizado: ${result.timestamp}`;
+                }
 
-        document.getElementById('captureForm').onsubmit = async (e) => {
-            e.preventDefault();
-            const btn = document.getElementById('submitBtn');
-            const originalContent = btn.innerHTML;
+                // Si es force refresh y no hay datos, esperar y volver a consultar
+                if (force && availableProyectos.length === 0 && proyectosRetryCount < MAX_PROYECTOS_RETRIES) {
+                    proyectosRetryCount++;
+                    console.log(`Waiting for sync... (attempt ${proyectosRetryCount}/${MAX_PROYECTOS_RETRIES})`);
+                    setTimeout(() => fetchProyectos(false), 5000); // 5 segundos
 
-            const rows = document.querySelectorAll('#itemsTable tbody tr');
-            const items = Array.from(rows).map(row => ({
-                item: row.querySelector('.lot-input').value,
-                descripcion: row.querySelector('.desc-input').value,
-                cantidad: row.querySelector('.qty-input').value
-            }));
-
-            btn.disabled = true;
-            btn.innerHTML = '<i class="ph ph-spinner ph-spin"></i> Enviando...';
-
-            try {
-                const response = await fetch("{{ url_for('design.submit_accessories') }}", {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ items: items })
-                });
-                const result = await response.json();
-
-                if (result.success) {
-                    await Swal.fire({
-                        icon: 'success',
-                        title: '¡Éxito!',
-                        text: result.message,
+                    if (proyectosRetryCount === 1) {
+                        Swal.fire({
+                            icon: 'info',
+                            title: 'Sincronización Iniciada',
+                            text: 'Descargando proyectos... Puede tardar hasta 1 minuto.',
+                            background: '#1a1a20',
+                            color: '#fff',
+                            timer: 3000,
+                            showConfirmButton: false
+                        });
+                    }
+                } else if (availableProyectos.length > 0) {
+                    proyectosRetryCount = 0; // Reset
+                    if (force) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: '¡Listo!',
+                            text: `${availableProyectos.length} proyectos encontrados.`,
+                            background: '#1a1a20',
+                            color: '#fff',
+                            timer: 2000,
+                            showConfirmButton: false
+                        });
+                    }
+                } else if (proyectosRetryCount >= MAX_PROYECTOS_RETRIES) {
+                    proyectosRetryCount = 0;
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Sincronización Lenta',
+                        text: 'Intenta recargar la página en unos momentos.',
                         background: '#1a1a20',
                         color: '#fff'
                     });
-                    document.querySelector('#itemsTable tbody').innerHTML = '';
-                    addRow();
-                } else {
-                    throw new Error(result.message);
                 }
-            } catch (error) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: error.message,
-                    background: '#1a1a20',
-                    color: '#fff'
-                });
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = originalContent;
             }
-        };
-    </script>
-    <script src="{{ url_for('static', filename='js/sidebar.js') }}"></script>
-</body>
+        } catch (error) {
+            console.error("Error fetching proyectos:", error);
+        }
+    }
 
-</html>
+    let activeProjects = new Set();
+
+    function displayProyectos() {
+        const grid = document.getElementById('projectsGrid');
+        if (!availableProyectos || availableProyectos.length === 0) {
+            grid.innerHTML = '<div class="empty-projects"><i class="ph ph-folder-open" style="font-size: 2rem; opacity: 0.3;"></i><p>No hay proyectos pendientes.</p></div>';
+            return;
+        }
+
+        grid.innerHTML = availableProyectos.map(p => {
+            const isActive = activeProjects.has(p.codigo_proyecto);
+
+            let btnHtml = '';
+            if (isActive) {
+                btnHtml = `
+                    <button class="btn btn-sm btn-outline-success project-action-btn" id="btn-proj-${p.codigo_proyecto}" onclick="toggleProject('${p.codigo_proyecto}')" style="cursor: default; opacity: 0.8;">
+                        Agregado <i class="ph ph-check-circle"></i>
+                    </button>
+                `;
+            } else {
+                btnHtml = `
+                    <button class="btn btn-sm btn-primary project-action-btn" id="btn-proj-${p.codigo_proyecto}" onclick="toggleProject('${p.codigo_proyecto}')">
+                        Solicitar <i class="ph ph-plus-circle"></i>
+                    </button>
+                `;
+            }
+
+            return `
+                <div class="project-card">
+                    <div class="project-card-header">
+                        <h4 class="project-card-title"><i class="ph ph-folder"></i> ${p.codigo_proyecto}</h4>
+                    </div>
+                    ${btnHtml}
+                </div>
+            `;
+        }).join('');
+    }
+
+    function toggleProject(codigo) {
+        if (activeProjects.has(codigo)) {
+            document.getElementById(`section-${codigo}`)?.scrollIntoView({ behavior: 'smooth' });
+            return;
+        }
+
+        activeProjects.add(codigo);
+
+        // Hide General Section
+        document.getElementById('generalItemsCard').style.display = 'none';
+
+        // Update Button State to 'Agregado' (Visual only, non-clickable effectively)
+        const btn = document.getElementById(`btn-proj-${codigo}`);
+        if (btn) {
+            btn.innerHTML = 'Agregado <i class="ph ph-check-circle"></i>';
+            btn.className = 'btn btn-sm btn-outline-success project-action-btn';
+            btn.style.cursor = 'default';
+            btn.style.opacity = '0.8';
+        }
+
+        createProjectSection(codigo);
+    }
+
+    function createProjectSection(codigo) {
+        const container = document.getElementById('projectSectionsContainer');
+        const sectionId = `section-${codigo}`;
+        const tbodyId = `tbody-${codigo}`;
+
+        const card = document.createElement('div');
+        card.className = 'capture-card';
+        card.id = sectionId;
+        card.style.marginBottom = '2rem';
+        card.style.borderLeft = '4px solid var(--accent-primary)';
+        card.style.animation = 'fadeIn 0.3s ease-in-out';
+
+        card.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h4 style="margin:0; display:flex; align-items:center; gap:0.5rem; color: var(--accent-primary);">
+                    <i class="ph ph-folder-open"></i> 
+                    Proyecto: ${codigo}
+                </h4>
+                <div style="display:flex; gap:0.5rem; align-items: center;">
+                    <button type="button" class="btn-sm btn-secondary" onclick="addRow('${tbodyId}', '${codigo}')" title="Agregar Item">
+                        <i class="ph ph-plus"></i> Item
+                    </button>
+                    <button type="button" class="btn-icon-danger" onclick="removeProject('${codigo}')" title="Remover Proyecto" style="background:none; border:none; color: #ef4444; font-size: 1.2rem; cursor: pointer; transition: transform 0.2s;">
+                        <i class="ph ph-trash"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="table-container">
+                <table class="table table-dark table-hover items-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 80px; text-align: center;">Item</th>
+                            <th style="width: 180px;">Partida</th>
+                            <th>Descripción</th>
+                            <th style="width: 120px; text-align: center;">Cant.</th>
+                            <th style="width: 50px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="${tbodyId}" class="project-tbody">
+                    </tbody>
+                </table>
+            </div>
+        `;
+
+        container.insertBefore(card, container.firstChild);
+        addRow(tbodyId, codigo);
+    }
+
+    function removeProject(codigo) {
+        activeProjects.delete(codigo);
+
+        // Show General Section if no projects active
+        if (activeProjects.size === 0) {
+            document.getElementById('generalItemsCard').style.display = 'block';
+        }
+
+        // Remove DOM
+        const section = document.getElementById(`section-${codigo}`);
+        if (section) {
+            section.style.opacity = '0';
+            setTimeout(() => section.remove(), 300);
+        }
+
+        // Reset Button
+        const btn = document.getElementById(`btn-proj-${codigo}`);
+        if (btn) {
+            btn.innerHTML = 'Solicitar <i class="ph ph-plus-circle"></i>';
+            btn.className = 'btn btn-sm btn-primary project-action-btn';
+            btn.style.cursor = 'pointer';
+            btn.style.opacity = '1';
+        }
+    }
+
+    async function fetchPartidas() {
+        try {
+            const response = await fetch("{{ url_for('design.get_partidas') }}");
+            const result = await response.json();
+
+            if (result.success) {
+                availablePartidas.splice(0, availablePartidas.length, ...result.partidas);
+
+                if (availablePartidas.length > 0) {
+                    document.querySelectorAll('.partida-wrapper').forEach(el => el.classList.add('has-data'));
+                }
+            }
+        } catch (error) {
+            console.error("Error fetching partidas:", error);
+        }
+    }
+
+    async function fetchInventario(force = false) {
+        setLoading(true);
+        try {
+            const url = `{{ url_for('design.get_inventario') }}${force ? '?force=true' : ''}`;
+            const response = await fetch(url);
+            const result = await response.json();
+
+            if (result.success) {
+                availableInventario.splice(0, availableInventario.length, ...result.items);
+
+                if (availableInventario.length > 0) {
+                    document.querySelectorAll('.desc-wrapper').forEach(el => el.classList.add('has-data'));
+                }
+
+                if (result.is_syncing && availableInventario.length === 0) {
+                    document.getElementById('syncTime').textContent = "Sincronizando por primera vez...";
+                    setTimeout(() => fetchInventario(), 3000);
+                } else if (result.timestamp) {
+                    document.getElementById('syncTime').textContent = `Sincronizado: ${result.timestamp}`;
+                }
+
+                if (force) {
+                    Swal.fire({
+                        icon: 'info',
+                        title: 'Sincronización Iniciada',
+                        text: 'Se están descargando los datos de inventario. El selector se actualizará en unos segundos.',
+                        background: '#1a1a20',
+                        color: '#fff',
+                        timer: 3000,
+                        showConfirmButton: false
+                    });
+                }
+            }
+        } catch (error) {
+            console.error("Error fetching inventario:", error);
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    function setLoading(isLoading) {
+        const status = document.getElementById('loadingStatus');
+        const refreshBtn = document.getElementById('refreshBtn');
+        if (status) status.style.display = isLoading ? 'block' : 'none';
+        if (refreshBtn) refreshBtn.disabled = isLoading;
+    }
+
+    // Initialize with general row
+    fetchProyectos();
+    fetchPartidas();
+    fetchInventario();
+    addRow('generalTableBody');
+
+    document.getElementById('captureForm').onsubmit = async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('submitBtn');
+        const originalContent = btn.innerHTML;
+
+        // Gather all rows from ALL tables with class 'items-table'
+        const allRows = document.querySelectorAll('.items-table tbody tr');
+
+        if (allRows.length === 0) {
+            Swal.fire({ title: 'Sin datos', text: 'No hay items para enviar.' });
+            return;
+        }
+
+        const items = Array.from(allRows).map(row => ({
+            item: row.querySelector('.lot-input')?.value || '1',
+            partida: row.querySelector('.partida-input').value,
+            descripcion: row.querySelector('.desc-input').value,
+            cantidad: row.querySelector('.qty-input').value
+        })).filter(i => i.partida && i.descripcion); // Simple validation
+
+        if (items.length === 0) {
+            Swal.fire({ icon: 'warning', title: 'Vacío', text: 'Complete al menos una fila.' });
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="ph ph-spinner ph-spin"></i> Enviando...';
+
+        try {
+            const response = await fetch("{{ url_for('design.submit_accessories') }}", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ items: items })
+            });
+            const result = await response.json();
+
+            if (result.success) {
+                await Swal.fire({
+                    icon: 'success',
+                    title: '¡Éxito!',
+                    text: result.message,
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+                window.location.reload();
+            } else {
+                throw new Error(result.error || 'Error desconocido');
+            }
+        } catch (error) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: error.message,
+                background: '#1a1a20',
+                color: '#fff'
+            });
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalContent;
+        }
+    };
+
+</script>
+{% endblock %}

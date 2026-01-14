@@ -1,675 +1,482 @@
-<!DOCTYPE html>
-<html lang="es">
+{% extends "layout.html" %}
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Captura de Materiales | AutoIntelli</title>
-    <link rel="icon" href="{{ url_for('static', filename='images/logo.svg') }}" type="image/svg+xml">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
-    <script src="https://unpkg.com/@phosphor-icons/web"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="{{ url_for('static', filename='js/dropdowns.js') }}"></script>
-    <style>
-        .capture-card {
-            background: rgba(255, 255, 255, 0.02);
-            border: 1px solid var(--glass-border);
-            border-radius: 12px;
-            padding: 2rem;
-            margin-bottom: 2rem;
-        }
+{% block title %}Captura de Materiales | AutoIntelli{% endblock %}
 
-        .items-table {
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 0;
-            margin-top: 1rem;
-        }
+{% block extra_head %}
+<script src="{{ url_for('static', filename='js/dropdowns.js') }}"></script>
+<style>
+    .capture-card {
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid var(--glass-border);
+        border-radius: 12px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
 
-        .items-table th {
-            background: rgba(255, 255, 255, 0.05);
-            padding: 1rem;
-            text-align: left;
-            font-size: 0.85rem;
-            color: var(--text-secondary);
-            font-weight: 600;
-        }
+    .items-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        margin-top: 1rem;
+    }
 
-        .items-table td {
-            background: rgba(255, 255, 255, 0.01);
-            border-bottom: 1px solid var(--glass-border);
-            padding: 0.5rem;
-            vertical-align: middle;
-            position: relative;
-        }
+    .items-table th {
+        background: rgba(255, 255, 255, 0.05);
+        padding: 1rem;
+        text-align: left;
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+        font-weight: 600;
+    }
 
-        .items-table td:focus-within {
-            z-index: 100;
-        }
+    .items-table td {
+        background: rgba(255, 255, 255, 0.01);
+        border-bottom: 1px solid var(--glass-border);
+        padding: 0.5rem;
+        vertical-align: middle;
+        position: relative;
+    }
 
-        .table-input {
-            width: 100%;
-            background: transparent;
-            border: none;
-            color: white;
-            padding: 0.8rem 0.5rem;
-            outline: none;
-            font-family: inherit;
-            font-size: 0.9rem;
-        }
+    .items-table td:focus-within {
+        z-index: 100;
+    }
 
-        .table-input:focus {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 4px;
-        }
+    .table-input {
+        width: 100%;
+        background: transparent;
+        border: none;
+        color: white;
+        padding: 0.8rem 0.5rem;
+        outline: none;
+        font-family: inherit;
+        font-size: 0.9rem;
+    }
 
-        select.table-input {
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            appearance: none;
-            cursor: pointer;
-            color: white;
-            background-color: transparent;
-        }
+    .table-input:focus {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 4px;
+    }
 
-        select.table-input option {
-            background-color: #1a1a20;
-            color: white;
-        }
+    select.table-input {
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+        cursor: pointer;
+        color: white;
+        background-color: transparent;
+    }
 
-        .action-bar {
-            margin-top: 1rem;
-            display: flex;
-            gap: 1rem;
-        }
-    </style>
-</head>
+    select.table-input option {
+        background-color: #1a1a20;
+        color: white;
+    }
 
-<body style="background-image: none; background-color: var(--bg-color);">
-    <div class="dashboard-layout">
-        <div class="sidebar-overlay" id="sidebar-overlay"></div>
-        <!-- Sidebar -->
-        <aside class="sidebar" id="sidebar">
-            <div class="sidebar-header">
-                <a href="{{ url_for('main.dashboard') }}" class="logo" style="justify-content: center;">
-                    <img src="{{ url_for('static', filename='images/logo.svg') }}" alt="Reyper System">
-                </a>
-                <button class="sidebar-toggle-btn" id="sidebar-collapse-btn" title="Contraer/Expandir">
-                    <i class="ph ph-caret-left"></i>
-                </button>
-                <i class="ph ph-x sidebar-close" id="sidebar-close" style="display:none;"></i>
-            </div>
+    .action-bar {
+        margin-top: 1rem;
+        display: flex;
+        gap: 1rem;
+    }
+</style>
+{% endblock %}
 
-            <ul class="sidebar-menu">
-                <li class="menu-item">
-                    <a href="{{ url_for('main.dashboard') }}" class="menu-link">
-                        <i class="ph ph-squares-four"></i> <span>Menú Principal</span>
-                    </a>
-                </li>
-                <li class="menu-item">
-                    <a href="{{ url_for('logistics.home') }}" class="menu-link">
-                        <i class="ph ph-truck"></i> <span>Panel Logística</span>
-                    </a>
-                </li>
+{% block sidebar_nav %}
+<li class="menu-item">
+    <a href="{{ url_for('logistics.home') }}"
+        class="menu-link {% if request.endpoint == 'logistics.home' %}active{% endif %}">
+        <i class="ph ph-truck"></i> <span>Panel Logística</span>
+    </a>
+</li>
+{% endblock %}
 
-                <li
-                    style="margin: 1.5rem 0 0.5rem 1rem; font-size: 0.75rem; text-transform: uppercase; color: var(--text-secondary); letter-spacing: 0.05em;">
-                    Herramientas</li>
+{% block page_title %}Captura de Materiales{% endblock %}
 
-                {% for tool in tools %}
-                <li class="menu-item">
-                    <a href="{{ url_for(tool.route) }}"
-                        class="menu-link {{ 'active' if tool.name == 'captura' else '' }}">
-                        <i class="ph {{ tool.icon }}"></i> <span>{{ tool.label }}</span>
-                    </a>
-                </li>
-                {% endfor %}
-            </ul>
+{% block content %}
+<form id="captureForm">
+    <div class="capture-card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <h3 style="color: var(--accent-primary);">Lista de Materiales</h3>
+            <button type="button" class="btn-secondary" onclick="addRow()">
+                <i class="ph ph-plus"></i> Agregar Fila
+            </button>
+        </div>
 
-            <div class="sidebar-footer">
-                <a href="{{ url_for('auth.logout') }}" class="menu-link" style="color: #ef4444;">
-                    <i class="ph ph-sign-out"></i> <span>Cerrar Sesión</span>
-                </a>
-            </div>
-        </aside>
-
-        <!-- Main Content -->
-        <main class="main-content">
-            <div class="top-bar" style="justify-content: space-between;">
-                <button class="mobile-menu-toggle" id="dashboard-toggle">
-                    <i class="ph ph-list"></i>
-                </button>
-                <h1>Captura de Materiales</h1>
-
-                <div class="user-info"
-                    style="display: flex; align-items: center; gap: 1rem; color: var(--text-primary); margin-left: auto;">
-                    <div style="text-align: right;">
-                        <div style="font-weight: 600;">{{ user.username or user.email }}</div>
-                        {% if user.username %}
-                        <div style="font-size: 0.7rem; color: var(--text-secondary); margin-bottom: 2px;">{{ user.email
-                            }}</div>
-                        {% endif %}
-                        <div style="font-size: 0.8rem; margin-top: 2px;">
-                            {% if roles %}
-                            {% for role in roles %}
-                            <span
-                                style="background: var(--accent-primary); padding: 2px 6px; border-radius: 4px; margin-left: 4px; font-size: 0.7rem;">{{
-                                role }}</span>
-                            {% endfor %}
-                            {% else %}
-                            <span style="opacity: 0.7;">Sin rol</span>
-                            {% endif %}
-                        </div>
-                    </div>
-                    <div
-                        style="width: 40px; height: 40px; background: rgba(255,255,255,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                        <i class="ph ph-user"></i>
-                    </div>
-                </div>
-            </div>
-
-            <form id="captureForm">
-                <div class="capture-card">
-                    <div
-                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-                        <h3 style="color: var(--accent-primary);">Lista de Materiales</h3>
-                        <button type="button" class="btn-secondary" onclick="addRow()">
-                            <i class="ph ph-plus"></i> Agregar Fila
-                        </button>
-                    </div>
-
-                    <div style="overflow-x: auto;">
-                        <table class="items-table" id="itemsTable">
-                            <thead>
-                                <tr>
-                                    <th style="width: 180px;">Partida</th>
-                                    <th style="min-width: 180px;">Material</th>
-                                    <th style="width: 100px;">Forma</th>
-                                    <th style="width: 70px;">Cant.</th>
-                                    <th style="width: 80px;">U.M.</th>
-                                    <th style="width: 90px;">Diámetro</th>
-                                    <th style="width: 90px;">Largo</th>
-                                    <th style="width: 90px;">Ancho</th>
-                                    <th style="width: 90px;">Alto/Esp.</th>
-                                    <th style="width: 20px;"></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <!-- JS -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-
-                <div
-                    style="text-align: right; display: flex; justify-content: flex-end; align-items: center; gap: 1rem;">
-                    <div id="syncTime" style="color: var(--text-muted); font-size: 0.8rem;"></div>
-                    <div id="loadingStatus" style="color: var(--accent-primary); font-size: 0.9rem; display: none;">
-                        <i class="ph ph-spinner ph-spin"></i> Cargando partidas desde Notion...
-                    </div>
-                    <button type="button" class="btn-secondary" id="refreshBtn" onclick="fetchPartidas(true)"
-                        title="Forzar actualización desde Notion">
-                        <i class="ph ph-arrows-clockwise"></i> Recargar
-                    </button>
-                    <button type="submit" class="btn-primary" id="submitBtn">
-                        <i class="ph ph-paper-plane-right"></i> Enviar a Notion
-                    </button>
-                </div>
-            </form>
-        </main>
+        <div style="overflow-x: auto;">
+            <table class="items-table" id="itemsTable">
+                <thead>
+                    <tr>
+                        <th style="width: 180px;">Partida</th>
+                        <th style="min-width: 180px;">Material</th>
+                        <th style="width: 100px;">Forma</th>
+                        <th style="width: 70px;">Cant.</th>
+                        <th style="width: 80px;">U.M.</th>
+                        <th style="width: 90px;">Diámetro</th>
+                        <th style="width: 90px;">Largo</th>
+                        <th style="width: 90px;">Ancho</th>
+                        <th style="width: 90px;">Alto/Esp.</th>
+                        <th style="width: 20px;"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- JS -->
+                </tbody>
+            </table>
+        </div>
     </div>
 
-    <script>
-        const STANDARD_INCHES = [
-            "1/16", "1/8", "3/16", "1/4", "5/16", "3/8", "7/16", "1/2",
-            "9/16", "5/8", "11/16", "3/4", "13/16", "7/8", "15/16", "1",
-            "1 1/16", "1 1/8", "1 3/16", "1 1/4", "1 5/16", "1 3/8", "1 7/16", "1 1/2",
-            "1 5/8", "1 3/4", "1 7/8", "2", "2 1/4", "2 1/2", "2 3/4", "3",
-            "3 1/4", "3 1/2", "3 3/4", "4", "4 1/4", "4 1/2", "4 3/4", "5",
-            "5 1/4", "5 1/2", "5 3/4", "6", "6 1/4", "6 1/2", "6 3/4", "7",
-            "7 1/4", "7 1/2", "7 3/4", "8", "8 1/4", "8 1/2", "8 3/4", "9",
-            "9 1/4", "9 1/2", "9 3/4", "10", "11", "12", "14", "16", "18", "20",
-            "22", "24", "26", "28", "30", "32", "36", "40", "48", "60", "72",
-            "78", "96", "120", "144", "168", "192", "240"
-        ];
+    <div style="text-align: right; display: flex; justify-content: flex-end; align-items: center; gap: 1rem;">
+        <div id="syncTime" style="color: var(--text-muted); font-size: 0.8rem;"></div>
+        <div id="loadingStatus" style="color: var(--accent-primary); font-size: 0.9rem; display: none;">
+            <i class="ph ph-spinner ph-spin"></i> Cargando partidas desde Notion...
+        </div>
+        <button type="button" class="btn-secondary" id="refreshBtn" onclick="fetchPartidas(true)"
+            title="Forzar actualización desde Notion">
+            <i class="ph ph-arrows-clockwise"></i> Recargar
+        </button>
+        <button type="submit" class="btn-primary" id="submitBtn">
+            <i class="ph ph-paper-plane-right"></i> Enviar a Notion
+        </button>
+    </div>
+</form>
+{% endblock %}
 
-        let availablePartidas = [];
-        let availableMateriales = [];
+{% block extra_scripts %}
+<script>
+    const STANDARD_INCHES = [
+        "1/16", "1/8", "3/16", "1/4", "5/16", "3/8", "7/16", "1/2",
+        "9/16", "5/8", "11/16", "3/4", "13/16", "7/8", "15/16", "1",
+        "1 1/16", "1 1/8", "1 3/16", "1 1/4", "1 5/16", "1 3/8", "1 7/16", "1 1/2",
+        "1 5/8", "1 3/4", "1 7/8", "2", "2 1/4", "2 1/2", "2 3/4", "3",
+        "3 1/4", "3 1/2", "3 3/4", "4", "4 1/4", "4 1/2", "4 3/4", "5",
+        "5 1/4", "5 1/2", "5 3/4", "6", "6 1/4", "6 1/2", "6 3/4", "7",
+        "7 1/4", "7 1/2", "7 3/4", "8", "8 1/4", "8 1/2", "8 3/4", "9",
+        "9 1/4", "9 1/2", "9 3/4", "10", "11", "12", "14", "16", "18", "20",
+        "22", "24", "26", "28", "30", "32", "36", "40", "48", "60", "72",
+        "78", "96", "120", "144", "168", "192", "240"
+    ];
 
-        async function fetchPartidas(force = false) {
-            setLoading(true);
-            try {
-                const url = `{{ url_for('logistics.get_partidas') }}${force ? '?force=true' : ''}`;
-                const response = await fetch(url);
-                const result = await response.json();
-                if (result.success) {
-                    availablePartidas.splice(0, availablePartidas.length, ...result.partidas);
-                    updateDropdowns();
+    let availablePartidas = [];
+    let availableMateriales = [];
 
-                    if (result.is_syncing && availablePartidas.length === 0) {
+    async function fetchPartidas(force = false) {
+        setLoading(true);
+        try {
+            const url = `{{ url_for('logistics.get_partidas') }}${force ? '?force=true' : ''}`;
+            const response = await fetch(url);
+            const result = await response.json();
+            if (result.success) {
+                availablePartidas.splice(0, availablePartidas.length, ...result.partidas);
+                updateDropdowns();
 
-                        document.getElementById('syncTime').textContent = `Sincronizando por primera vez...`;
-                        // Reintentar en 5 segundos si está vacío y sincronizando
-                        setTimeout(() => fetchPartidas(), 5000);
-                    } else if (result.timestamp) {
-                        document.getElementById('syncTime').textContent = `Sincronizado: ${result.timestamp}`;
-                    }
+                if (result.is_syncing && availablePartidas.length === 0) {
+                    document.getElementById('syncTime').textContent = `Sincronizando por primera vez...`;
+                    setTimeout(() => fetchPartidas(), 5000);
+                } else if (result.timestamp) {
+                    document.getElementById('syncTime').textContent = `Sincronizado: ${result.timestamp}`;
+                }
 
-                    if (force) {
-                        fetchMateriales(); // También actualizar materiales en el frontend
-                        Swal.fire({
-                            icon: 'info',
-                            title: 'Sincronización Iniciada',
-                            text: 'Se ha iniciado la descarga de datos frescos en segundo plano. La lista se actualizará automáticamente en unos minutos.',
-                            background: '#1a1a20',
-                            color: '#fff',
-                            timer: 3000,
-                            showConfirmButton: false
-                        });
-                    }
-                } else {
+                if (force) {
+                    fetchMateriales();
                     Swal.fire({
-                        icon: 'error',
-                        title: 'Error de Notion',
-                        text: result.message,
+                        icon: 'info',
+                        title: 'Sincronización Iniciada',
+                        text: 'Se ha iniciado la descarga de datos frescos en segundo plano. La lista se actualizará automáticamente en unos minutos.',
                         background: '#1a1a20',
-                        color: '#fff'
+                        color: '#fff',
+                        timer: 3000,
+                        showConfirmButton: false
                     });
                 }
-            } catch (error) {
-                console.error("Error fetching partidas:", error);
-            } finally {
-                setLoading(false);
-            }
-        }
-
-        function setLoading(isLoading) {
-            const submitBtn = document.getElementById('submitBtn');
-            const refreshBtn = document.getElementById('refreshBtn');
-            const status = document.getElementById('loadingStatus');
-            const inputs = document.querySelectorAll('.table-input, .btn-secondary:not(#refreshBtn)');
-
-            if (isLoading) {
-                if (submitBtn) submitBtn.disabled = true;
-                if (refreshBtn) refreshBtn.disabled = true;
-                status.style.display = 'block';
-                inputs.forEach(el => el.disabled = true);
             } else {
-                if (submitBtn) submitBtn.disabled = false;
-                if (refreshBtn) refreshBtn.disabled = false;
-                status.style.display = 'none';
-                inputs.forEach(el => el.disabled = false);
-            }
-        }
-
-        async function fetchMateriales() {
-            try {
-                const response = await fetch("{{ url_for('logistics.get_materiales') }}");
-                const result = await response.json();
-                if (result.success) {
-                    availableMateriales.splice(0, availableMateriales.length, ...result.materiales);
-                    updateDropdowns();
-
-                    if (result.is_syncing && availableMateriales.length === 0) {
-
-                        // Si está sincronizando y no hay datos, reintentar en 5s
-                        setTimeout(() => fetchMateriales(), 5000);
-                    }
-                }
-            } catch (error) {
-                console.error("Error fetching materiales:", error);
-            }
-        }
-
-        function updateDropdowns() {
-            // Ya no usamos datalists nativos, los datos están en availablePartidas y availableMateriales
-            if (availablePartidas.length > 0) {
-                document.querySelectorAll('.partida-wrapper').forEach(el => el.classList.add('has-data'));
-            }
-            if (availableMateriales.length > 0) {
-                document.querySelectorAll('.material-wrapper').forEach(el => el.classList.add('has-data'));
-            }
-        }
-
-
-        function addRow() {
-            const tbody = document.querySelector('#itemsTable tbody');
-            const tr = document.createElement('tr');
-
-            const partidaHasData = availablePartidas.length > 0 ? 'has-data' : '';
-            const materialHasData = availableMateriales.length > 0 ? 'has-data' : '';
-
-            tr.innerHTML = `
-                <td>
-                    <div class="select-wrapper partida-wrapper ${partidaHasData}">
-                        <input type="text" class="table-input partida-input" placeholder="Buscar partida..." autocomplete="off">
-                    </div>
-                </td>
-                <td>
-                    <div class="select-wrapper material-wrapper ${materialHasData}">
-                        <input type="text" class="table-input material-input" placeholder="Buscar material.." required autocomplete="off">
-                    </div>
-                </td>
-                <td>
-                    <input type="text" class="table-input forma-input" readonly placeholder="-" style="background: rgba(255,255,255,0.05); text-align: center; font-size: 0.75rem;">
-                </td>
-                <td>
-                    <div class="quantity-wrapper">
-                        <button type="button" class="quantity-btn minus-btn"><i class="ph ph-minus"></i></button>
-                        <input type="number" class="table-input cantidad-input quantity-input" value="1" min="1">
-                        <button type="button" class="quantity-btn plus-btn"><i class="ph ph-plus"></i></button>
-                    </div>
-                </td>
-                <td>
-                    <div class="select-wrapper um-wrapper has-data">
-                        <input type="text" class="table-input um-input" value="mm" readonly autocomplete="off" style="cursor: pointer; text-align: center;">
-                    </div>
-                </td>
-                <td class="dim-cell"><div class="select-wrapper"><input type="text" class="table-input diametro-input" placeholder="0" autocomplete="off"></div></td>
-                <td class="dim-cell"><div class="select-wrapper"><input type="text" class="table-input largo-input" placeholder="0" autocomplete="off"></div></td>
-                <td class="dim-cell"><div class="select-wrapper"><input type="text" class="table-input ancho-input" placeholder="0" autocomplete="off"></div></td>
-                <td class="dim-cell"><div class="select-wrapper"><input type="text" class="table-input alto-input" placeholder="0" autocomplete="off"></div></td>
-                <td>
-                    <div style="color: #ef4444; cursor: pointer; text-align: center;" onclick="deleteRow(this)">
-                        <i class="ph ph-trash"></i>
-                    </div>
-                </td>
-            `;
-
-            const partidaInput = tr.querySelector('.partida-input');
-            const materialInput = tr.querySelector('.material-input');
-            const umSelect = tr.querySelector('.um-input');
-            const dimInputs = {
-                diametro: tr.querySelector('.diametro-input'),
-                largo: tr.querySelector('.largo-input'),
-                ancho: tr.querySelector('.ancho-input'),
-                alto: tr.querySelector('.alto-input')
-            };
-
-            // Inicializar buscadores principales con getters para que siempre vean el array actualizado
-            initCustomDropdown(partidaInput, () => availablePartidas, 'partida-wrapper');
-            initCustomDropdown(materialInput, () => availableMateriales, 'material-wrapper');
-            initCustomDropdown(umSelect, ['mm', 'in'], 'um-wrapper');
-
-            // Inicializar buscadores de dimensiones con lógica de unidad integrada
-            Object.values(dimInputs).forEach(input => {
-                initCustomDropdown(input, () => {
-                    return umSelect.value === 'in' ? STANDARD_INCHES : [];
-                }, 'select-wrapper');
-            });
-
-            // Lógica de botones de cantidad
-            const qtyInput = tr.querySelector('.cantidad-input');
-            const minusBtn = tr.querySelector('.minus-btn');
-            const plusBtn = tr.querySelector('.plus-btn');
-
-            minusBtn.onclick = () => {
-                const val = parseInt(qtyInput.value) || 1;
-                if (val > 1) qtyInput.value = val - 1;
-            };
-
-            plusBtn.onclick = () => {
-                const val = parseInt(qtyInput.value) || 1;
-                qtyInput.value = val + 1;
-            };
-
-            // Agregar validación dinámica de dimensiones
-            const validateDimensions = (e) => {
-                const hasDiam = parseFraction(dimInputs.diametro.value) > 0;
-                const hasAncho = parseFraction(dimInputs.ancho.value) > 0;
-                const hasAlto = parseFraction(dimInputs.alto.value) > 0;
-                const formaInput = tr.querySelector('.forma-input');
-
-                if (hasDiam) {
-                    dimInputs.ancho.disabled = true;
-                    dimInputs.alto.disabled = true;
-                    dimInputs.ancho.style.opacity = '0.3';
-                    dimInputs.alto.style.opacity = '0.3';
-                    formaInput.value = 'Cilíndrica';
-                } else if (hasAncho || hasAlto) {
-                    dimInputs.diametro.disabled = true;
-                    dimInputs.diametro.style.opacity = '0.3';
-                    formaInput.value = 'Prismática';
-                } else {
-                    dimInputs.diametro.disabled = false;
-                    dimInputs.ancho.disabled = false;
-                    dimInputs.alto.disabled = false;
-                    dimInputs.diametro.style.opacity = '1';
-                    dimInputs.ancho.style.opacity = '1';
-                    dimInputs.alto.style.opacity = '1';
-                    formaInput.value = '-';
-                }
-            };
-
-            const dimInputsList = Object.values(dimInputs);
-
-            // Función para mover al siguiente input al seleccionar una opción de la lista
-            dimInputsList.forEach((input, index) => {
-                input.addEventListener('input', (e) => {
-                    // Restringir caracteres: solo números, / y espacios
-                    const originalValue = e.target.value;
-                    const cleanedValue = originalValue.replace(/[^0-9\/ ]/g, '');
-                    if (originalValue !== cleanedValue) {
-                        e.target.value = cleanedValue;
-                    }
-
-                    const val = e.target.value.trim();
-                    if (umSelect.value === 'in' && STANDARD_INCHES.includes(val)) {
-                        const nextInput = dimInputsList[index + 1];
-                        if (nextInput && !nextInput.disabled) {
-                            nextInput.focus();
-                        } else {
-                            e.target.blur();
-                        }
-                    }
-                });
-
-                // También validar dimensiones al cambiar
-                input.addEventListener('input', validateDimensions);
-            });
-
-            tbody.appendChild(tr);
-        }
-
-        function parseFraction(val) {
-            if (!val) return 0;
-            if (typeof val === 'number') return val;
-            val = val.toString().trim();
-            if (!val.includes('/') && !val.includes(' ')) return parseFloat(val) || 0;
-
-            let parts = val.split(' ');
-            let decimal = 0;
-
-            if (parts.length === 2) {
-                decimal = parseFloat(parts[0]);
-                val = parts[1];
-            } else if (parts.length === 1 && val.includes('/')) {
-                // Just fraction, decimal remains 0
-            } else {
-                return parseFloat(val) || 0;
-            }
-
-            let fracParts = val.split('/');
-            if (fracParts.length === 2) {
-                decimal += parseFloat(fracParts[0]) / parseFloat(fracParts[1]);
-            }
-            return decimal;
-        }
-
-        function deleteRow(btn) {
-            const tbody = document.querySelector('#itemsTable tbody');
-            if (tbody.children.length > 1) {
-                btn.closest('tr').remove();
-            } else {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Atención',
-                    text: 'Debe haber al menos una partida.',
-                    background: '#1a1a20',
-                    color: '#fff'
-                });
-            }
-        }
-
-        // Initialize
-        // Carga inicial
-        addRow();
-        fetchPartidas();
-        fetchMateriales();
-
-        // Evitar enviar formulario al pulsar Enter en los inputs
-        document.getElementById('captureForm').addEventListener('keydown', function (e) {
-            if (e.key === 'Enter' && e.target.tagName === 'INPUT') {
-                e.preventDefault();
-                return false;
-            }
-        });
-
-        document.getElementById('captureForm').addEventListener('submit', async function (e) {
-            e.preventDefault();
-
-            const rows = document.querySelectorAll('#itemsTable tbody tr');
-            const items = [];
-
-            for (const row of rows) {
-                const partidaInput = row.querySelector('.partida-input');
-                const materialInput = row.querySelector('.material-input');
-                const formaInput = row.querySelector('.forma-input');
-
-                const partida = partidaInput.value.trim();
-                const material = materialInput.value.trim();
-                const forma = formaInput.value;
-
-                if (!partida || !material || forma === '-') {
-                    await Swal.fire({
-                        icon: 'warning',
-                        title: 'Campos incompletos',
-                        text: 'Asegúrese de seleccionar partida, material y medidas válidas en todas las filas.',
-                        background: '#1a1a20',
-                        color: '#fff'
-                    });
-                    return;
-                }
-
-                // Obtener valores de medidas parseados
-                const diamRaw = row.querySelector('.diametro-input').value;
-                const largoRaw = row.querySelector('.largo-input').value;
-                const anchoRaw = row.querySelector('.ancho-input').value;
-                const altoRaw = row.querySelector('.alto-input').value;
-                const um = row.querySelector('.um-input').value;
-                const cantidad = parseInt(row.querySelector('.cantidad-input').value) || 1;
-
-                const diam = parseFraction(diamRaw);
-                const largo = parseFraction(largoRaw);
-                const ancho = parseFraction(anchoRaw);
-                const alto = parseFraction(altoRaw);
-
-                // Validaciones por forma
-                if (forma === 'Cilíndrica') {
-                    if (diam <= 0 || largo <= 0) {
-                        await Swal.fire({
-                            icon: 'error',
-                            title: 'Error de medidas',
-                            text: `La partida ${partida} es Cilíndrica y requiere Diámetro y Largo mayores a 0.`,
-                            background: '#1a1a20',
-                            color: '#fff'
-                        });
-                        return;
-                    }
-                } else if (forma === 'Prismática') {
-                    if (largo <= 0 || ancho <= 0 || alto <= 0) {
-                        await Swal.fire({
-                            icon: 'error',
-                            title: 'Error de medidas',
-                            text: `La partida ${partida} es Prismática y requiere Largo, Ancho y Alto mayores a 0.`,
-                            background: '#1a1a20',
-                            color: '#fff'
-                        });
-                        return;
-                    }
-                } else {
-                    // This case should ideally be caught by the initial `forma === '-'` check
-                    await Swal.fire({
-                        icon: 'error',
-                        title: 'Faltan medidas',
-                        text: `La partida ${partida} no tiene medidas suficientes para determinar su forma.`,
-                        background: '#1a1a20',
-                        color: '#fff'
-                    });
-                    return;
-                }
-
-                const itemData = {
-                    partida: partida,
-                    material: material,
-                    forma: forma,
-                    cantidad: cantidad,
-                    um: um,
-                    diametro: diamRaw,
-                    largo: largoRaw,
-                    ancho: anchoRaw,
-                    alto: altoRaw
-                };
-
-                items.push(itemData);
-            }
-
-            if (items.length === 0) return;
-
-            // Mostrar estado de carga en el botón
-            const submitBtn = document.getElementById('submitBtn');
-            const originalBtnContent = submitBtn.innerHTML;
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="ph ph-spinner ph-spin"></i> Enviando...';
-
-            try {
-                const response = await fetch("{{ url_for('logistics.submit_capture') }}", {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ items: items })
-                });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    await Swal.fire({
-                        icon: 'success',
-                        title: '¡Éxito!',
-                        text: result.message,
-                        background: '#1a1a20',
-                        color: '#fff'
-                    });
-                    // Limpiar tabla (dejar una sola fila vacía)
-                    document.querySelector('#itemsTable tbody').innerHTML = '';
-                    addRow();
-                } else {
-                    throw new Error(result.message);
-                }
-            } catch (error) {
                 Swal.fire({
                     icon: 'error',
-                    title: 'Error',
-                    text: error.message || 'Hubo un error al enviar los datos.',
+                    title: 'Error de Notion',
+                    text: result.message,
                     background: '#1a1a20',
                     color: '#fff'
                 });
-            } finally {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = originalBtnContent;
             }
+        } catch (error) {
+            console.error("Error fetching partidas:", error);
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    function setLoading(isLoading) {
+        const submitBtn = document.getElementById('submitBtn');
+        const refreshBtn = document.getElementById('refreshBtn');
+        const status = document.getElementById('loadingStatus');
+        const inputs = document.querySelectorAll('.table-input, .btn-secondary:not(#refreshBtn)');
+
+        if (isLoading) {
+            if (submitBtn) submitBtn.disabled = true;
+            if (refreshBtn) refreshBtn.disabled = true;
+            status.style.display = 'block';
+            inputs.forEach(el => el.disabled = true);
+        } else {
+            if (submitBtn) submitBtn.disabled = false;
+            if (refreshBtn) refreshBtn.disabled = false;
+            status.style.display = 'none';
+            inputs.forEach(el => el.disabled = false);
+        }
+    }
+
+    async function fetchMateriales() {
+        try {
+            const response = await fetch("{{ url_for('logistics.get_materiales') }}");
+            const result = await response.json();
+            if (result.success) {
+                availableMateriales.splice(0, availableMateriales.length, ...result.materiales);
+                updateDropdowns();
+
+                if (result.is_syncing && availableMateriales.length === 0) {
+                    setTimeout(() => fetchMateriales(), 5000);
+                }
+            }
+        } catch (error) {
+            console.error("Error fetching materiales:", error);
+        }
+    }
+
+    function updateDropdowns() {
+        if (availablePartidas.length > 0) {
+            document.querySelectorAll('.partida-wrapper').forEach(el => el.classList.add('has-data'));
+        }
+        if (availableMateriales.length > 0) {
+            document.querySelectorAll('.material-wrapper').forEach(el => el.classList.add('has-data'));
+        }
+    }
+
+    function addRow() {
+        const tbody = document.querySelector('#itemsTable tbody');
+        const tr = document.createElement('tr');
+
+        const partidaHasData = availablePartidas.length > 0 ? 'has-data' : '';
+        const materialHasData = availableMateriales.length > 0 ? 'has-data' : '';
+
+        tr.innerHTML = `
+            <td>
+                <div class="select-wrapper partida-wrapper ${partidaHasData}">
+                    <input type="text" class="table-input partida-input" placeholder="Buscar partida..." autocomplete="off">
+                </div>
+            </td>
+            <td>
+                <div class="select-wrapper material-wrapper ${materialHasData}">
+                    <input type="text" class="table-input material-input" placeholder="Buscar material.." required autocomplete="off">
+                </div>
+            </td>
+            <td>
+                <input type="text" class="table-input forma-input" readonly placeholder="-" style="background: rgba(255,255,255,0.05); text-align: center; font-size: 0.75rem;">
+            </td>
+            <td>
+                <div class="quantity-wrapper">
+                    <button type="button" class="quantity-btn minus-btn"><i class="ph ph-minus"></i></button>
+                    <input type="number" class="table-input cantidad-input quantity-input" value="1" min="1">
+                    <button type="button" class="quantity-btn plus-btn"><i class="ph ph-plus"></i></button>
+                </div>
+            </td>
+            <td>
+                <div class="select-wrapper um-wrapper has-data">
+                    <input type="text" class="table-input um-input" value="mm" readonly autocomplete="off" style="cursor: pointer; text-align: center;">
+                </div>
+            </td>
+            <td class="dim-cell"><div class="select-wrapper"><input type="text" class="table-input diametro-input" placeholder="0" autocomplete="off"></div></td>
+            <td class="dim-cell"><div class="select-wrapper"><input type="text" class="table-input largo-input" placeholder="0" autocomplete="off"></div></td>
+            <td class="dim-cell"><div class="select-wrapper"><input type="text" class="table-input ancho-input" placeholder="0" autocomplete="off"></div></td>
+            <td class="dim-cell"><div class="select-wrapper"><input type="text" class="table-input alto-input" placeholder="0" autocomplete="off"></div></td>
+            <td>
+                <div style="color: #ef4444; cursor: pointer; text-align: center;" onclick="deleteRow(this)">
+                    <i class="ph ph-trash"></i>
+                </div>
+            </td>
+        `;
+
+        const partidaInput = tr.querySelector('.partida-input');
+        const materialInput = tr.querySelector('.material-input');
+        const umSelect = tr.querySelector('.um-input');
+        const dimInputs = {
+            diametro: tr.querySelector('.diametro-input'),
+            largo: tr.querySelector('.largo-input'),
+            ancho: tr.querySelector('.ancho-input'),
+            alto: tr.querySelector('.alto-input')
+        };
+
+        initCustomDropdown(partidaInput, () => availablePartidas, 'partida-wrapper');
+        initCustomDropdown(materialInput, () => availableMateriales, 'material-wrapper');
+        initCustomDropdown(umSelect, ['mm', 'in'], 'um-wrapper');
+
+        Object.values(dimInputs).forEach(input => {
+            initCustomDropdown(input, () => {
+                return umSelect.value === 'in' ? STANDARD_INCHES : [];
+            }, 'select-wrapper');
         });
 
-        // Event listener para evitar submit con Enter
-        document.getElementById('captureForm').addEventListener('keydown', function (e) {
-            if (e.key === 'Enter' && e.target.tagName === 'INPUT') {
-                e.preventDefault();
-                return false;
-            }
-        });
-    </script>
-    <script src="{{ url_for('static', filename='js/sidebar.js') }}"></script>
-</body>
+        const qtyInput = tr.querySelector('.cantidad-input');
+        tr.querySelector('.minus-btn').onclick = () => {
+            const val = parseInt(qtyInput.value) || 1;
+            if (val > 1) qtyInput.value = val - 1;
+        };
+        tr.querySelector('.plus-btn').onclick = () => {
+            const val = parseInt(qtyInput.value) || 1;
+            qtyInput.value = val + 1;
+        };
 
-</html>
+        const validateDimensions = (e) => {
+            const hasDiam = parseFraction(dimInputs.diametro.value) > 0;
+            const hasAncho = parseFraction(dimInputs.ancho.value) > 0;
+            const hasAlto = parseFraction(dimInputs.alto.value) > 0;
+            const formaInput = tr.querySelector('.forma-input');
+
+            if (hasDiam) {
+                dimInputs.ancho.disabled = true;
+                dimInputs.alto.disabled = true;
+                dimInputs.ancho.style.opacity = '0.3';
+                dimInputs.alto.style.opacity = '0.3';
+                formaInput.value = 'Cilíndrica';
+            } else if (hasAncho || hasAlto) {
+                dimInputs.diametro.disabled = true;
+                dimInputs.diametro.style.opacity = '0.3';
+                formaInput.value = 'Prismática';
+            } else {
+                dimInputs.diametro.disabled = false;
+                dimInputs.ancho.disabled = false;
+                dimInputs.alto.disabled = false;
+                dimInputs.diametro.style.opacity = '1';
+                dimInputs.ancho.style.opacity = '1';
+                dimInputs.alto.style.opacity = '1';
+                formaInput.value = '-';
+            }
+        };
+
+        Object.values(dimInputs).forEach((input, index) => {
+            input.addEventListener('input', (e) => {
+                const originalValue = e.target.value;
+                const cleanedValue = originalValue.replace(/[^0-9\/ ]/g, '');
+                if (originalValue !== cleanedValue) {
+                    e.target.value = cleanedValue;
+                }
+            });
+            input.addEventListener('input', validateDimensions);
+        });
+
+        tbody.appendChild(tr);
+    }
+
+    function parseFraction(val) {
+        if (!val) return 0;
+        if (typeof val === 'number') return val;
+        val = val.toString().trim();
+        if (!val.includes('/') && !val.includes(' ')) return parseFloat(val) || 0;
+        let parts = val.split(' ');
+        let decimal = 0;
+        if (parts.length === 2) {
+            decimal = parseFloat(parts[0]);
+            val = parts[1];
+        } else if (parts.length === 1 && val.includes('/')) {
+        } else {
+            return parseFloat(val) || 0;
+        }
+        let fracParts = val.split('/');
+        if (fracParts.length === 2) {
+            decimal += parseFloat(fracParts[0]) / parseFloat(fracParts[1]);
+        }
+        return decimal;
+    }
+
+    function deleteRow(btn) {
+        const tbody = document.querySelector('#itemsTable tbody');
+        if (tbody.children.length > 1) {
+            btn.closest('tr').remove();
+        } else {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Atención',
+                text: 'Debe haber al menos una partida.',
+                background: '#1a1a20',
+                color: '#fff'
+            });
+        }
+    }
+
+    fetchPartidas();
+    fetchMateriales();
+    addRow();
+
+    document.getElementById('captureForm').onsubmit = async (e) => {
+        e.preventDefault();
+        const rows = document.querySelectorAll('#itemsTable tbody tr');
+        const items = [];
+
+        for (const row of rows) {
+            const partidaInput = row.querySelector('.partida-input');
+            const materialInput = row.querySelector('.material-input');
+            const formaInput = row.querySelector('.forma-input');
+
+            const partida = partidaInput.value.trim();
+            const material = materialInput.value.trim();
+            const forma = formaInput.value;
+
+            if (!partida || !material || forma === '-') {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Campos incompletos',
+                    text: 'Asegúrese de seleccionar partida, material y medidas válidas.',
+                    background: '#1a1a20',
+                    color: '#fff'
+                });
+                return;
+            }
+
+            const diamRaw = row.querySelector('.diametro-input').value;
+            const largoRaw = row.querySelector('.largo-input').value;
+            const anchoRaw = row.querySelector('.ancho-input').value;
+            const altoRaw = row.querySelector('.alto-input').value;
+            const um = row.querySelector('.um-input').value;
+            const cantidad = parseInt(row.querySelector('.cantidad-input').value) || 1;
+
+            items.push({
+                partida, material, forma, cantidad, um,
+                diametro: diamRaw, largo: largoRaw, ancho: anchoRaw, alto: altoRaw
+            });
+        }
+
+        const submitBtn = document.getElementById('submitBtn');
+        const originalContent = submitBtn.innerHTML;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="ph ph-spinner ph-spin"></i> Enviando...';
+
+        try {
+            const response = await fetch("{{ url_for('logistics.submit_capture') }}", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ items: items })
+            });
+            const result = await response.json();
+            if (result.success) {
+                await Swal.fire({
+                    icon: 'success',
+                    title: '¡Éxito!',
+                    text: result.message,
+                    background: '#1a1a20',
+                    color: '#fff'
+                });
+                document.querySelector('#itemsTable tbody').innerHTML = '';
+                addRow();
+            } else {
+                throw new Error(result.message);
+            }
+        } catch (error) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: error.message,
+                background: '#1a1a20',
+                color: '#fff'
+            });
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalContent;
+        }
+    };
+</script>
+{% endblock %}
