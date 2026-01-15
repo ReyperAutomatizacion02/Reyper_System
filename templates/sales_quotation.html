@@ -586,38 +586,26 @@
                     await new Promise(r => setTimeout(r, 2000));
                 }
 
-                const [resC, resU, resP, resA] = await Promise.all([
-                    fetch("{{ url_for('sales.get_clientes') }}"),
-                    fetch("{{ url_for('sales.get_usuarios') }}"),
-                    fetch("{{ url_for('sales.get_puestos') }}"),
-                    fetch("{{ url_for('sales.get_areas') }}")
-                ]);
-                const [dataC, dataU, dataP, dataA] = await Promise.all([
-                    resC.json(),
-                    resU.json(),
-                    resP.json(),
-                    resA.json()
-                ]);
+                const response = await fetch("{{ url_for('sales.get_all_data') }}");
+                const result = await response.json();
 
-                if (dataC.success) {
-                    availableClientes = dataC.data;
-                    document.querySelector('.cliente-wrapper').classList.toggle('has-data', availableClientes.length > 0);
-                    console.log("DEBUG: Clientes cargados:", availableClientes.length);
-                }
-                if (dataU.success) {
-                    availableUsuarios = dataU.data;
-                    document.querySelector('.usuario-wrapper').classList.toggle('has-data', availableUsuarios.length > 0);
-                    console.log("DEBUG: Usuarios cargados:", availableUsuarios.length);
-                }
-                if (dataP.success) {
-                    availablePuestos = dataP.data;
-                    document.querySelector('.puesto-wrapper').classList.toggle('has-data', availablePuestos.length > 0);
-                    console.log("DEBUG: Puestos cargados:", availablePuestos.length);
-                }
-                if (dataA.success) {
-                    availableAreas = dataA.data;
-                    document.querySelector('.area-wrapper').classList.toggle('has-data', availableAreas.length > 0);
-                    console.log("DEBUG: Áreas cargadas:", availableAreas.length);
+                if (result.success) {
+                    availableClientes = result.clientes.data;
+                    availableUsuarios = result.usuarios.data;
+                    availablePuestos = result.puestos.data;
+                    availableAreas = result.areas.data;
+
+                    document.querySelector('.cliente-wrapper')?.classList.toggle('has-data', availableClientes.length > 0);
+                    document.querySelector('.usuario-wrapper')?.classList.toggle('has-data', availableUsuarios.length > 0);
+                    document.querySelector('.puesto-wrapper')?.classList.toggle('has-data', availablePuestos.length > 0);
+                    document.querySelector('.area-wrapper')?.classList.toggle('has-data', availableAreas.length > 0);
+
+                    console.log("DEBUG: Datos unificados cargados:", {
+                        clientes: availableClientes.length,
+                        usuarios: availableUsuarios.length,
+                        puestos: availablePuestos.length,
+                        areas: availableAreas.length
+                    });
                 }
 
                 if (force) {

@@ -52,34 +52,21 @@ MATERIALES_CACHE = {
     'is_syncing': False
 }
 
-def refresh_notion_cache():
-    """Función para sincronizar datos de Notion (Partidas y Materiales) en segundo plano."""
-    global PARTIDAS_CACHE, MATERIALES_CACHE
-    if PARTIDAS_CACHE['is_syncing'] or MATERIALES_CACHE['is_syncing']:
-        return
-    
-    PARTIDAS_CACHE['is_syncing'] = True
-    MATERIALES_CACHE['is_syncing'] = True
-    try:
-        load_dotenv()
-        token = os.getenv('NOTION_TOKEN_LOGISTICA')
-        database_id = os.getenv('NOTION_DATABASE_ID_LOGISTICA')
-        
-        if not token or not database_id:
-            PARTIDAS_CACHE['is_syncing'] = False
-            return
+from concurrent.futures import ThreadPoolExecutor
 
+def fetch_logistics_data_parallel(token, database_id, material_db_id):
+    """Función auxiliar para realizar las peticiones a Notion en paralelo."""
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Notion-Version": "2022-06-28",
+        "Content-Type": "application/json"
+    }
+
+    def fetch_partidas():
+        url = f"https://api.notion.com/v1/databases/{database_id}/query?filter_properties=title"
         today = datetime.now()
         one_year_ago = (today - timedelta(days=365)).strftime('%Y-%m-%d')
         one_year_ahead = (today + timedelta(days=365)).strftime('%Y-%m-%d')
-
-        url = f"https://api.notion.com/v1/databases/{database_id}/query?filter_properties=title"
-        headers = {
-            "Authorization": f"Bearer {token}",
-            "Notion-Version": "2022-06-28",
-            "Content-Type": "application/json"
-        }
-        
         payload = {
             "filter": {
                 "and": [
@@ -92,86 +79,85 @@ def refresh_notion_cache():
                 ]
             }
         }
-
-        new_partidas = []
+        
+        results_list = []
         has_more = True
         next_cursor = None
+        MAX_PAGES = 100
         pages_fetched = 0
-        MAX_PAGES = 100 # Hasta 10,000 registros
 
         while has_more and pages_fetched < MAX_PAGES:
-            if next_cursor:
-                payload["start_cursor"] = next_cursor
-                
+            if next_cursor: payload["start_cursor"] = next_cursor
             response = requests.post(url, headers=headers, json=payload, timeout=30)
-            
             if response.ok:
                 data = response.json()
-                results = data.get('results', [])
-                for page in results:
-                    props = page.get('properties', {})
-                    title_prop = props.get('01-CODIGO PIEZA', {}).get('title', [])
+                for page in data.get('results', []):
+                    title_prop = page.get('properties', {}).get('01-CODIGO PIEZA', {}).get('title', [])
                     if title_prop:
-                        text_content = title_prop[0].get('plain_text', '')
-                        if text_content:
-                            new_partidas.append(text_content)
-                
+                        text = title_prop[0].get('plain_text', '')
+                        if text: results_list.append(text)
                 has_more = data.get('has_more', False)
                 next_cursor = data.get('next_cursor')
                 pages_fetched += 1
-            else:
-                break
-            
-        new_partidas.sort()
-        PARTIDAS_CACHE['data'] = new_partidas
-        PARTIDAS_CACHE['timestamp'] = datetime.now()
-        print(f"DEBUG: Sincronización de PARTIDAS completada. {len(new_partidas)} registros obtenidos.")
+            else: break
+        return sorted(results_list)
 
-        # --- Sincronización de MATERIALES ---
+    def fetch_materiales():
+        if not material_db_id: return []
+        url = f"https://api.notion.com/v1/databases/{material_db_id}/query?filter_properties=title"
+        payload = {"filter": {"property": "MATERIAL", "title": {"is_not_empty": True}}}
+        
+        results_list = []
+        has_more = True
+        next_cursor = None
+        MAX_PAGES = 100
+        pages_fetched = 0
+
+        while has_more and pages_fetched < MAX_PAGES:
+            if next_cursor: payload["start_cursor"] = next_cursor
+            response = requests.post(url, headers=headers, json=payload, timeout=30)
+            if response.ok:
+                data = response.json()
+                for page in data.get('results', []):
+                    title_prop = page.get('properties', {}).get('MATERIAL', {}).get('title', [])
+                    if title_prop:
+                        text = title_prop[0].get('plain_text', '')
+                        if text: results_list.append(text)
+                has_more = data.get('has_more', False)
+                next_cursor = data.get('next_cursor')
+                pages_fetched += 1
+            else: break
+        return sorted(results_list)
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        f_partidas = executor.submit(fetch_partidas)
+        f_materiales = executor.submit(fetch_materiales)
+        return f_partidas.result(), f_materiales.result()
+
+def refresh_notion_cache():
+    """Función para sincronizar datos de Notion (Partidas y Materiales) en paralelo."""
+    global PARTIDAS_CACHE, MATERIALES_CACHE
+    if PARTIDAS_CACHE['is_syncing'] or MATERIALES_CACHE['is_syncing']:
+        return
+    
+    PARTIDAS_CACHE['is_syncing'] = True
+    MATERIALES_CACHE['is_syncing'] = True
+    try:
+        load_dotenv()
+        token = os.getenv('NOTION_TOKEN_LOGISTICA')
+        database_id = os.getenv('NOTION_DATABASE_ID_LOGISTICA')
         material_db_id = os.getenv('NOTION_DATABASE_ID_MATERIAL')
-        if material_db_id:
-            url_mat = f"https://api.notion.com/v1/databases/{material_db_id}/query?filter_properties=title"
-            new_materiales = []
-            has_more = True
-            next_cursor = None
-            pages_fetched = 0
-            
-            # Re-usamos el endpoint de consulta
-            payload_mat = {
-                "filter": {
-                    "property": "MATERIAL",
-                    "title": {
-                        "is_not_empty": True
-                    }
-                }
-            }
+        
+        if not token or not database_id:
+            return
 
-            while has_more and pages_fetched < MAX_PAGES:
-                if next_cursor:
-                    payload_mat["start_cursor"] = next_cursor
-                
-                response = requests.post(url_mat, headers=headers, json=payload_mat, timeout=30)
-                if response.ok:
-                    data = response.json()
-                    results = data.get('results', [])
-                    for page in results:
-                        props = page.get('properties', {})
-                        title_prop = props.get('MATERIAL', {}).get('title', [])
-                        if title_prop:
-                            text_content = title_prop[0].get('plain_text', '')
-                            if text_content:
-                                new_materiales.append(text_content)
-                    
-                    has_more = data.get('has_more', False)
-                    next_cursor = data.get('next_cursor')
-                    pages_fetched += 1
-                else:
-                    break
-            
-            new_materiales.sort()
-            MATERIALES_CACHE['data'] = new_materiales
-            MATERIALES_CACHE['timestamp'] = datetime.now()
-            print(f"DEBUG: Sincronización de MATERIALES completada. {len(new_materiales)} registros obtenidos.")
+        partidas, materiales = fetch_logistics_data_parallel(token, database_id, material_db_id)
+        
+        now = datetime.now()
+        PARTIDAS_CACHE['data'] = partidas
+        PARTIDAS_CACHE['timestamp'] = now
+        MATERIALES_CACHE['data'] = materiales
+        MATERIALES_CACHE['timestamp'] = now
         
     except Exception as e:
         print(f"ERROR en sincronización de Notion: {str(e)}")
@@ -230,6 +216,24 @@ def get_materiales():
         })
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
+
+@logistics_bp.route('/api/data')
+@login_required
+def get_all_data():
+    """Endpoint unificado para obtener todos los datos de logística."""
+    global PARTIDAS_CACHE, MATERIALES_CACHE
+    return jsonify({
+        'success': True,
+        'partidas': {
+            'data': PARTIDAS_CACHE['data'],
+            'timestamp': PARTIDAS_CACHE['timestamp'].strftime('%Y-%m-%d %H:%M:%S') if PARTIDAS_CACHE['timestamp'] else None
+        },
+        'materiales': {
+            'data': MATERIALES_CACHE['data'],
+            'timestamp': MATERIALES_CACHE['timestamp'].strftime('%Y-%m-%d %H:%M:%S') if MATERIALES_CACHE['timestamp'] else None
+        },
+        'is_syncing': PARTIDAS_CACHE['is_syncing'] or MATERIALES_CACHE['is_syncing']
+    })
 
 @logistics_bp.route('/api/submit', methods=['POST']) 
 @login_required

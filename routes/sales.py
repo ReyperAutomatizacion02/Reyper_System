@@ -88,18 +88,22 @@ def fetch_notion_db(token, db_id, property_name):
             
     return sorted(list(set(results_list)))
 
+from concurrent.futures import ThreadPoolExecutor
+
+def fetch_notion_db_wrapper(args):
+    return fetch_notion_db(*args)
+
 def refresh_sales_cache(force=False):
-    """Sincroniza Clientes y Usuarios."""
-    global CLIENTES_CACHE, USUARIOS_CACHE
+    """Sincroniza Clientes, Usuarios, Puestos y Áreas en paralelo."""
+    global CLIENTES_CACHE, USUARIOS_CACHE, PUESTOS_CACHE, AREAS_CACHE
     
-    # Si ya está sincronizando, no hacer nada a menos que sea forzado (aunque is_syncing debería bloquear igual)
-    if not force and (CLIENTES_CACHE['is_syncing'] or USUARIOS_CACHE['is_syncing']):
+    # Si ya está sincronizando, no hacer nada a menos que sea forzado
+    if not force and any(c['is_syncing'] for c in [CLIENTES_CACHE, USUARIOS_CACHE, PUESTOS_CACHE, AREAS_CACHE]):
         return
 
-    CLIENTES_CACHE['is_syncing'] = True
-    USUARIOS_CACHE['is_syncing'] = True
-    PUESTOS_CACHE['is_syncing'] = True
-    AREAS_CACHE['is_syncing'] = True
+    # Marcar como sincronizando
+    for cache in [CLIENTES_CACHE, USUARIOS_CACHE, PUESTOS_CACHE, AREAS_CACHE]:
+        cache['is_syncing'] = True
     
     try:
         load_dotenv()
@@ -108,36 +112,43 @@ def refresh_sales_cache(force=False):
         db_usuarios = os.getenv('NOTION_DATABASE_ID_USUARIOS')
         db_cotizaciones = os.getenv('NOTION_DATABASE_ID_COTIZACIONES')
         
-        print(f"DEBUG: Iniciando sincronización de Ventas... (Force={force})")
-        
         if token:
+            tasks = []
             if db_clientes:
-                # El usuario solicitó "RAZON SOCIAL" (tipo texto/rich_text)
-                CLIENTES_CACHE['data'] = fetch_notion_db(token, db_clientes, "RAZON SOCIAL")
-                CLIENTES_CACHE['timestamp'] = datetime.now()
-                print(f"DEBUG: Clientes sincronizados ({len(CLIENTES_CACHE['data'])}) usando RAZON SOCIAL")
-            
+                tasks.append(('clientes', (token, db_clientes, "RAZON SOCIAL")))
             if db_usuarios:
-                # El usuario solicitó "NOMBRE COMPLETO" (tipo fórmula)
-                USUARIOS_CACHE['data'] = fetch_notion_db(token, db_usuarios, "NOMBRE COMPLETO")
-                USUARIOS_CACHE['timestamp'] = datetime.now()
-                print(f"DEBUG: Usuarios sincronizados ({len(USUARIOS_CACHE['data'])}) usando NOMBRE COMPLETO")
-
+                tasks.append(('usuarios', (token, db_usuarios, "NOMBRE COMPLETO")))
             if db_cotizaciones:
-                # El usuario solicitó "PUESTO" y "AREA"
-                PUESTOS_CACHE['data'] = fetch_notion_db(token, db_cotizaciones, "PUESTO")
-                PUESTOS_CACHE['timestamp'] = datetime.now()
-                AREAS_CACHE['data'] = fetch_notion_db(token, db_cotizaciones, "AREA")
-                AREAS_CACHE['timestamp'] = datetime.now()
-                print(f"DEBUG: Puestos ({len(PUESTOS_CACHE['data'])}) y Áreas ({len(AREAS_CACHE['data'])}) sincronizados")
+                tasks.append(('puestos', (token, db_cotizaciones, "PUESTO")))
+                tasks.append(('areas', (token, db_cotizaciones, "AREA")))
+
+            with ThreadPoolExecutor(max_workers=min(len(tasks), 4)) as executor:
+                future_to_key = {executor.submit(fetch_notion_db_wrapper, args): key for key, args in tasks}
+                for future in future_to_key:
+                    key = future_to_key[future]
+                    try:
+                        data = future.result()
+                        now = datetime.now()
+                        if key == 'clientes':
+                            CLIENTES_CACHE['data'] = data
+                            CLIENTES_CACHE['timestamp'] = now
+                        elif key == 'usuarios':
+                            USUARIOS_CACHE['data'] = data
+                            USUARIOS_CACHE['timestamp'] = now
+                        elif key == 'puestos':
+                            PUESTOS_CACHE['data'] = data
+                            PUESTOS_CACHE['timestamp'] = now
+                        elif key == 'areas':
+                            AREAS_CACHE['data'] = data
+                            AREAS_CACHE['timestamp'] = now
+                    except Exception as e:
+                        print(f"Error sincronizando {key}: {e}")
                 
     except Exception as e:
         print(f"Error en refresh_sales_cache: {e}")
     finally:
-        CLIENTES_CACHE['is_syncing'] = False
-        USUARIOS_CACHE['is_syncing'] = False
-        PUESTOS_CACHE['is_syncing'] = False
-        AREAS_CACHE['is_syncing'] = False
+        for cache in [CLIENTES_CACHE, USUARIOS_CACHE, PUESTOS_CACHE, AREAS_CACHE]:
+            cache['is_syncing'] = False
 
 def start_sales_sync():
     """Inicia el hilo de sincronización. Revisa cada 10 min si son las 6 AM."""
@@ -212,6 +223,32 @@ def get_areas():
         'data': AREAS_CACHE['data'],
         'timestamp': AREAS_CACHE['timestamp'].strftime('%Y-%m-%d %H:%M:%S') if AREAS_CACHE['timestamp'] else None,
         'is_syncing': AREAS_CACHE['is_syncing']
+    })
+
+@sales_bp.route('/api/data')
+@login_required
+def get_all_data():
+    """Endpoint unificado para obtener todos los datos de ventas."""
+    global CLIENTES_CACHE, USUARIOS_CACHE, PUESTOS_CACHE, AREAS_CACHE
+    return jsonify({
+        'success': True,
+        'clientes': {
+            'data': CLIENTES_CACHE['data'],
+            'timestamp': CLIENTES_CACHE['timestamp'].strftime('%Y-%m-%d %H:%M:%S') if CLIENTES_CACHE['timestamp'] else None
+        },
+        'usuarios': {
+            'data': USUARIOS_CACHE['data'],
+            'timestamp': USUARIOS_CACHE['timestamp'].strftime('%Y-%m-%d %H:%M:%S') if USUARIOS_CACHE['timestamp'] else None
+        },
+        'puestos': {
+            'data': PUESTOS_CACHE['data'],
+            'timestamp': PUESTOS_CACHE['timestamp'].strftime('%Y-%m-%d %H:%M:%S') if PUESTOS_CACHE['timestamp'] else None
+        },
+        'areas': {
+            'data': AREAS_CACHE['data'],
+            'timestamp': AREAS_CACHE['timestamp'].strftime('%Y-%m-%d %H:%M:%S') if AREAS_CACHE['timestamp'] else None
+        },
+        'is_syncing': any(c['is_syncing'] for c in [CLIENTES_CACHE, USUARIOS_CACHE, PUESTOS_CACHE, AREAS_CACHE])
     })
 
 # Herramientas del Módulo de Ventas

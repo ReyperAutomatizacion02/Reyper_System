@@ -186,14 +186,9 @@ def refresh_projects_cache():
             response = requests.post(url, headers=headers, json=payload, timeout=60)
             if response.ok:
                 data = response.json()
-                print(f"DEBUG: Retrieved {len(data.get('results', []))} results from Notion.")
                 
                 for i, page in enumerate(data.get('results', [])):
                     props = page.get('properties', {})
-                    
-                    # Log detail for first 3 items to verify structure
-                    if i < 3:
-                        print(f"DEBUG: Item {i} Props Keys: {list(props.keys())}")
                     
                     # 1. Check REQUIERE ACCESORIOS
                     requiere_prop = props.get('REQUIERE ACCESORIOS', {})
@@ -232,8 +227,6 @@ def refresh_projects_cache():
                             formula_res = codigo_prop.get('formula', {})
                             if formula_res.get('type') == 'string':
                                 codigo_val = formula_res.get('string', 'Sin código')
-                    else:
-                        if i < 3: print("DEBUG: 'CODIGO PROYECTO E' property NOT FOUND in keys.")
 
                     # --- DEBUG DIAGNOSTIC FOR "PENDIENTES" ---
                     # if 'pendientes' in estatus_text.lower():
@@ -315,11 +308,6 @@ def get_proyectos():
         if force_refresh:
             threading.Thread(target=refresh_projects_cache, daemon=True).start()
             return jsonify({'success': True, 'proyectos': PROYECTOS_CACHE['data'], 'message': 'Sincronización iniciada...'})
-
-        # Debug logging
-        print(f"DEBUG: API /proyectos - Returning {len(PROYECTOS_CACHE['data'])} projects")
-        if len(PROYECTOS_CACHE['data']) > 0:
-            print(f"DEBUG: First 3 projects: {PROYECTOS_CACHE['data'][:3]}")
         
         return jsonify({
             'success': True, 
