@@ -1,0 +1,22 @@
+{% extends "layout.html" %}
+
+{% block title %}Producción | AutoIntelli{% endblock %}
+{% block page_title %}Módulo de Producción{% endblock %}
+
+{% block content %}
+<div class="container" style="padding: 0;">
+    <div class="features-grid">
+        {% for tool in tools %}
+        <a href="{{ url_for(tool.route) }}" style="text-decoration: none; color: inherit; display: block;">
+            <div class="feature-card" style="cursor: pointer; height: 100%;">
+                <div class="feature-icon">
+                    <i class="ph {{ tool.icon }}"></i>
+                </div>
+                <h3>{{ tool.label }}</h3>
+                <p>Acceder a {{ tool.label }}</p>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

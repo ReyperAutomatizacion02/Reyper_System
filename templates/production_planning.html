@@ -1,0 +1,787 @@
+{% extends "layout.html" %}
+
+{% block title %}Planeación | AutoIntelli{% endblock %}
+{% block page_title %}Planeación de Producción{% endblock %}
+
+{% block extra_head %}
+<!-- Plotly.js -->
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<style>
+    .planning-container {
+        height: calc(100vh - 200px);
+        background: var(--glass-bg);
+        border: 1px solid var(--glass-border);
+        border-radius: 20px;
+        overflow: hidden;
+        margin-top: 1rem;
+        display: flex;
+    }
+
+    .chart-main {
+        flex: 1;
+        position: relative;
+        min-width: 0;
+    }
+
+    #plotly-chart {
+        width: 100%;
+        height: 100%;
+    }
+
+    .chart-sidebar {
+        width: 300px;
+        background: rgba(255, 255, 255, 0.02);
+        border-left: 1px solid var(--glass-border);
+        display: flex;
+        flex-direction: column;
+        padding: 1.5rem;
+        gap: 1.5rem;
+    }
+
+    .sidebar-section h3 {
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: var(--text-secondary);
+        margin-bottom: 0.75rem;
+    }
+
+    .search-input {
+        width: 100%;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--glass-border);
+        border-radius: 10px;
+        padding: 0.75rem 1rem;
+        color: #fff;
+        outline: none;
+        font-size: 0.9rem;
+    }
+
+    .search-input:focus {
+        border-color: var(--primary);
+    }
+
+    #machineFilter {
+        width: 100%;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--glass-border);
+        border-radius: 10px;
+        padding: 0.75rem 1rem;
+        color: #fff;
+        outline: none;
+        cursor: pointer;
+    }
+
+    .checkbox-accordion {
+        border: 1px solid var(--glass-border);
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.02);
+        overflow: hidden;
+    }
+
+    .accordion-header {
+        padding: 0.75rem 1rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        cursor: pointer;
+        background: rgba(255, 255, 255, 0.03);
+        transition: background 0.2s;
+    }
+
+    .accordion-header:hover {
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    .accordion-header h3 {
+        margin: 0;
+        font-size: 0.75rem;
+        letter-spacing: 0.5px;
+    }
+
+    .accordion-content {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s ease-out;
+    }
+
+    .accordion-content.open {
+        max-height: 250px;
+        overflow-y: auto;
+    }
+
+    .checkbox-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+        padding: 1rem;
+    }
+
+    .checkbox-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        cursor: pointer;
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+        transition: all 0.2s;
+        padding: 0.4rem 0.6rem;
+        border-radius: 6px;
+    }
+
+    .checkbox-item:hover {
+        background: rgba(255, 255, 255, 0.05);
+        color: #fff;
+    }
+
+    .checkbox-item input[type="checkbox"] {
+        accent-color: var(--primary);
+        width: 14px;
+        height: 14px;
+        cursor: pointer;
+    }
+
+    .piece-list {
+        flex: 1;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+        padding-right: 0.5rem;
+        margin-top: 0.5rem;
+    }
+
+    .piece-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.6rem 0.8rem;
+        border-radius: 10px;
+        cursor: pointer;
+        transition: all 0.2s;
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid transparent;
+    }
+
+    .piece-item:hover {
+        background: rgba(255, 255, 255, 0.06);
+        border-color: rgba(255, 255, 255, 0.1);
+        transform: translateX(4px);
+    }
+
+    .piece-thumbnail {
+        width: 32px;
+        height: 32px;
+        border-radius: 4px;
+        object-fit: cover;
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    .piece-color {
+        width: 12px;
+        height: 12px;
+        border-radius: 3px;
+        flex-shrink: 0;
+    }
+
+    .piece-info {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+    }
+
+    .piece-id {
+        font-weight: 600;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .piece-name {
+        color: var(--text-secondary);
+        font-size: 0.75rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .planning-controls {
+        padding: 1rem 2rem;
+        background: rgba(255, 255, 255, 0.03);
+        border-bottom: 1px solid var(--glass-border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-radius: 15px;
+        margin-bottom: 1rem;
+    }
+
+    #syncStatus {
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+    }
+
+    .empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        width: 100%;
+        color: var(--text-secondary);
+        gap: 1rem;
+        position: absolute;
+        top: 0;
+        left: 0;
+    }
+
+    /* Custom Floating Tooltip */
+    #custom-tooltip {
+        position: fixed;
+        pointer-events: none;
+        z-index: 9999;
+        display: none;
+        background: rgba(26, 26, 32, 0.95);
+        backdrop-filter: blur(15px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 12px;
+        padding: 0;
+        box-shadow: 0 15px 40px rgba(0, 0, 0, 0.6);
+        color: #fff;
+        overflow: hidden;
+        flex-direction: row;
+        /* Side by side */
+        min-width: 320px;
+        max-width: 500px;
+    }
+
+    #tooltip-image-container {
+        flex: 0 0 140px;
+        background: rgba(0, 0, 0, 0.2);
+        display: none;
+        /* Only if image exists */
+    }
+
+    .tooltip-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .tooltip-content {
+        flex: 1;
+        padding: 1.25rem;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    .tooltip-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.4rem;
+        font-size: 0.85rem;
+    }
+
+    .tooltip-item:last-child {
+        margin-bottom: 0;
+    }
+
+    .tooltip-item.title {
+        font-weight: 700;
+        font-size: 0.95rem;
+        margin-bottom: 0.75rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    /* Hide default Plotly tooltips but keep events firing */
+    .hoverlayer {
+        display: none !important;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="planning-controls">
+    <div style="display: flex; align-items: center; gap: 1rem;">
+        <h2 style="margin: 0; font-size: 1.2rem; color: var(--text-primary);">Cronograma de Producción</h2>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 1rem;">
+        <span id="syncStatus">Sincronizando...</span>
+        <button class="btn-secondary" onclick="toggleFullScreen()" title="Pantalla Completa">
+            <i class="ph ph-corners-out"></i>
+        </button>
+        <button class="btn-primary" onclick="fetchPlanningData(true)">
+            <i class="ph ph-arrows-clockwise"></i> Sincronizar Notion
+        </button>
+    </div>
+</div>
+
+<div class="planning-container">
+    <div class="chart-main">
+        <div id="plotly-chart"></div>
+        <div id="emptyState" class="empty-state" style="display: none;">
+            <i class="ph ph-calendar-x" style="font-size: 3rem; opacity: 0.3;"></i>
+            <p>No hay registros de planeación disponibles para el rango actual.</p>
+        </div>
+    </div>
+
+    <div class="chart-sidebar">
+        <div class="sidebar-section">
+            <div class="checkbox-accordion">
+                <div class="accordion-header" onclick="toggleAccordion('machineAccordion')">
+                    <h3 id="machineCountText">MÁQUINAS (Cargando...)</h3>
+                    <i class="ph ph-caret-down"></i>
+                </div>
+                <div id="machineAccordion" class="accordion-content">
+                    <div style="padding: 0.5rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                        <button class="btn-text" onclick="toggleAllMachines(true)"
+                            style="font-size: 0.7rem; color: var(--primary); background: none; border: none; cursor: pointer;">Seleccionar
+                            Todo</button>
+                    </div>
+                    <div id="machineCheckboxes" class="checkbox-list">
+                        <!-- Se llena dinámicamente -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="sidebar-section" style="flex: 1; display: flex; flex-direction: column; min-height: 0;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                <h3 style="margin: 0; font-size: 0.75rem; letter-spacing: 0.5px; text-transform: uppercase;">PARTIDAS
+                </h3>
+                <span id="pieceCount" style="font-size: 0.7rem; color: var(--text-secondary);"></span>
+            </div>
+            <div style="position: relative; margin-bottom: 0.5rem;">
+                <i class="ph ph-magnifying-glass"
+                    style="position: absolute; left: 0.75rem; top: 0.75rem; color: var(--text-secondary); font-size: 0.8rem;"></i>
+                <input type="text" id="pieceSearch" class="search-input"
+                    style="padding: 0.5rem 0.75rem 0.5rem 2rem; font-size: 0.8rem;"
+                    placeholder="Buscar por código o nombre..." oninput="applyFilters()">
+            </div>
+            <div id="pieceList" class="piece-list">
+                <!-- Se llena dinámicamente -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Floating Tooltip Container (inside container for fullscreen) -->
+    <div id="custom-tooltip">
+        <div id="tooltip-image-container"></div>
+        <div class="tooltip-content">
+            <div id="tooltip-title" class="tooltip-item title"></div>
+            <div id="tooltip-body"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    let planningData = [];
+
+    async function fetchPlanningData(force = false) {
+        const status = document.getElementById('syncStatus');
+        status.textContent = "Cargando...";
+
+        try {
+            const url = `{{ url_for('production.get_all_data') }}${force ? '?force=true' : ''}`;
+            const response = await fetch(url);
+            const result = await response.json();
+
+            console.log("Planning Data received:", result);
+
+            if (result.success) {
+                planningData = result.planeacion.data;
+                renderPlotlyTimeline();
+
+                if (result.is_syncing) {
+                    status.textContent = "Sincronizando Notion...";
+                    setTimeout(() => fetchPlanningData(), 5000);
+                } else {
+                    status.textContent = `Sincronizado: ${result.planeacion.timestamp || 'Ahora'}`;
+                }
+
+                if (force) {
+                    Swal.fire({
+                        icon: 'info',
+                        title: 'Sincronización en curso',
+                        text: 'Consultando cambios recientes en Notion...',
+                        timer: 2000,
+                        showConfirmButton: false,
+                        background: '#1a1a20',
+                        color: '#fff'
+                    });
+                }
+            }
+        } catch (error) {
+            console.error("Error fetching planning data:", error);
+            status.textContent = "Error de conexión";
+        }
+    }
+
+    function renderPlotlyTimeline(filteredItems = null) {
+        const chartDiv = document.getElementById('plotly-chart');
+        const emptyState = document.getElementById('emptyState');
+        const dataToRender = filteredItems || planningData;
+
+        if (!dataToRender || dataToRender.length === 0) {
+            chartDiv.style.opacity = '0.3';
+            emptyState.style.display = 'flex';
+            // Aún así renderizar trazas vacías para limpiar el gráfico si es necesario
+        } else {
+            chartDiv.style.opacity = '1';
+            emptyState.style.display = 'none';
+        }
+
+        // Función para generar un color estable basado en un string (Nombre de Pieza)
+        function stringToColor(str) {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                hash = str.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            const h = Math.abs(hash % 360);
+            return `hsl(${h}, 70%, 55%)`;
+        }
+
+        // Agrupar datos por PARTIDA para tener un trazo por pieza en la leyenda
+        // pero todos se mapearán a sus respectivas Máquinas en el eje Y
+        const pieceTraces = {};
+
+        // Obtener lista única de máquinas para ordenar el eje Y
+        const allMachines = [...new Set(planningData.map(d => d.maquina || 'Sin Máquina'))].sort();
+
+        dataToRender.forEach(item => {
+            const pieceName = item.partida || item.n || 'Sin Nombre';
+            const machine = item.maquina || 'Sin Máquina';
+            const pieceUniqueId = item.partida_id || pieceName;
+
+            if (!pieceTraces[pieceUniqueId]) {
+                const color = stringToColor(pieceUniqueId);
+                pieceTraces[pieceUniqueId] = {
+                    name: pieceName,
+                    displayName: item.nombre_pieza || item.n,
+                    type: 'bar',
+                    orientation: 'h',
+                    x: [],
+                    y: [],
+                    base: [],
+                    marker: {
+                        color: color,
+                        line: {
+                            color: 'rgba(255,255,255,0.4)',
+                            width: 1
+                        }
+                    },
+                    hoverinfo: 'text', // Needs text to fire events in some versions
+                    text: [],
+                    textposition: 'inside',
+                    insidetextanchor: 'start',
+                    textfont: {
+                        color: '#fff',
+                        size: 10,
+                        family: 'Inter, sans-serif'
+                    },
+                    showlegend: false,
+                    opacity: 0.85,
+                    width: 0.6,
+                    customdata: [],
+                    sidebarImageUrl: item.imagen_url
+                };
+            }
+
+            const startStr = item.fecha_planeada || item.fecha_creacion;
+            if (!startStr) return;
+
+            const start = new Date(startStr);
+            let end = item.fecha_planeada_fin ? new Date(item.fecha_planeada_fin) : new Date(start);
+
+            // Duración mínima de 2 horas si es un punto
+            if (start.getTime() === end.getTime()) {
+                end = new Date(start.getTime() + (2 * 60 * 60 * 1000));
+            }
+
+            const durationMs = end - start;
+
+            pieceTraces[pieceUniqueId].base.push(start);
+            pieceTraces[pieceUniqueId].x.push(durationMs);
+            pieceTraces[pieceUniqueId].y.push(machine);
+
+            // Store rich data in customdata for each point
+            pieceTraces[pieceUniqueId].customdata.push({
+                partida: item.partida,
+                nombre: item.nombre_pieza || item.n,
+                maquina: machine,
+                operador: item.operador || 'N/A',
+                inicio: start.toLocaleString(),
+                fin: end.toLocaleString(),
+                imagen: item.imagen_url,
+                color: pieceTraces[pieceUniqueId].marker.color
+            });
+
+            pieceTraces[pieceUniqueId].text.push(`📦 ${item.partida}<br>🏷️ ${item.nombre_pieza || item.n}`); // Label on bar
+        });
+
+        const traces = Object.values(pieceTraces);
+
+        // Actualizar UI Sidebar
+        if (!filteredItems) {
+            updateMachineFilter(allMachines);
+        }
+        renderPieceList(traces);
+        document.getElementById('pieceCount').textContent = `${traces.length} total`;
+
+        // Línea de "Hoy"
+        const now = new Date();
+        const shapes = [{
+            type: 'line',
+            x0: now,
+            x1: now,
+            y0: 0,
+            y1: 1,
+            yref: 'paper',
+            line: { color: '#bc2122', width: 2, dash: 'dot' }
+        }];
+
+        const layout = {
+            paper_bgcolor: 'rgba(0,0,0,0)',
+            plot_bgcolor: 'rgba(0,0,0,0)',
+            font: { color: '#eef0f2', family: 'Inter, sans-serif' },
+            showlegend: false,
+            margin: { l: 140, r: 20, t: 10, b: 40 },
+            xaxis: {
+                type: 'date',
+                gridcolor: 'rgba(255,255,255,0.03)', // Más sutil
+                zeroline: false,
+                title: '',
+                side: 'bottom'
+            },
+            yaxis: {
+                gridcolor: 'rgba(255,255,255,0.03)', // Más sutil
+                zeroline: false,
+                title: '',
+                categoryarray: allMachines,
+                categoryorder: 'array',
+                tickfont: { size: 11, color: '#ced4da' }
+            },
+            hovermode: 'closest',
+            hoverlabel: {
+                align: 'left',
+                bordercolor: 'rgba(255, 255, 255, 0.1)',
+                font: { size: 12 }
+            },
+            barmode: 'stack', // Stack con base = Gantt
+            shapes: shapes,
+            dragmode: 'pan'
+        };
+
+        const config = {
+            responsive: true,
+            displaylogo: false,
+            modeBarButtonsToRemove: ['select2d', 'lasso2d', 'autoScale2d']
+        };
+
+        Plotly.newPlot('plotly-chart', traces, layout, config);
+
+        // Hover events for custom tooltip
+        chartDiv.on('plotly_hover', function (data) {
+            const point = data.points[0];
+            if (!point.customdata) return;
+
+            const d = point.customdata;
+            const tooltip = document.getElementById('custom-tooltip');
+            const imgContainer = document.getElementById('tooltip-image-container');
+            const title = document.getElementById('tooltip-title');
+            const body = document.getElementById('tooltip-body');
+
+            // Set color background
+            const colorHsla = (d.color || '').replace('hsl', 'hsla').replace(')', ', 0.9)');
+            tooltip.style.backgroundColor = colorHsla || 'rgba(26, 26, 32, 0.95)';
+            tooltip.style.display = 'flex'; // Use flex for side-by-side
+
+            // Image logic
+            if (d.imagen) {
+                imgContainer.style.display = 'block';
+                imgContainer.innerHTML = `<img src="${d.imagen}" class="tooltip-img">`;
+            } else {
+                imgContainer.style.display = 'none';
+            }
+
+            title.innerHTML = `📦 ${d.partida}`;
+            body.innerHTML = `
+                <div class="tooltip-item">🏷️ ${d.nombre}</div>
+                <div class="tooltip-item">⚙️ ${d.maquina}</div>
+                <div class="tooltip-item">👤 ${d.operador}</div>
+                <div class="tooltip-item">🛫 ${d.inicio}</div>
+                <div class="tooltip-item">🏁 ${d.fin}</div>
+            `;
+
+            updateTooltipPos(data.event);
+        });
+
+        chartDiv.on('plotly_unhover', function () {
+            document.getElementById('custom-tooltip').style.display = 'none';
+        });
+
+        chartDiv.addEventListener('mousemove', function (e) {
+            updateTooltipPos(e);
+        });
+    }
+
+    function updateTooltipPos(e) {
+        const tooltip = document.getElementById('custom-tooltip');
+        if (tooltip.style.display !== 'none') {
+            const windowWidth = window.innerWidth;
+            const windowHeight = window.innerHeight;
+
+            // Temporary block to measure
+            tooltip.style.visibility = 'hidden';
+            tooltip.style.display = 'flex';
+
+            const tWidth = tooltip.offsetWidth || 350;
+            const tHeight = tooltip.offsetHeight || 200;
+
+            tooltip.style.visibility = 'visible';
+
+            let x = e.clientX + 20;
+            let y = e.clientY + 20;
+
+            if (x + tWidth > windowWidth) x = e.clientX - tWidth - 20;
+            if (y + tHeight > windowHeight) y = e.clientY - tHeight - 20;
+
+            tooltip.style.left = x + 'px';
+            tooltip.style.top = y + 'px';
+        }
+    }
+
+    function renderPieceList(traces) {
+        const list = document.getElementById('pieceList');
+        list.innerHTML = '';
+
+        // Ordenar piezas por ID
+        const sortedTraces = traces.sort((a, b) => a.name.localeCompare(b.name));
+
+        sortedTraces.forEach(t => {
+            const item = document.createElement('div');
+            item.className = 'piece-item';
+            item.onclick = () => {
+                const searchInput = document.getElementById('pieceSearch');
+                searchInput.value = t.name;
+                applyFilters();
+            };
+
+            const imgHtml = t.sidebarImageUrl
+                ? `<img src="${t.sidebarImageUrl}" class="piece-thumbnail">`
+                : `<div class="piece-thumbnail" style="display:flex; align-items:center; justify-content:center;"><i class="ph ph-image-square" style="opacity:0.2;"></i></div>`;
+
+            item.innerHTML = `
+                <div class="piece-color" style="background: ${t.marker.color}"></div>
+                ${imgHtml}
+                <div class="piece-info">
+                    <span class="piece-id">${t.name}</span>
+                    <span class="piece-name">${t.displayName}</span>
+                </div>
+            `;
+            list.appendChild(item);
+        });
+    }
+
+    function updateMachineFilter(machines) {
+        const container = document.getElementById('machineCheckboxes');
+        if (container.children.length > 0) return; // Ya lleno
+
+        document.getElementById('machineCountText').textContent = `MÁQUINAS (${machines.length})`;
+
+        machines.forEach(m => {
+            const label = document.createElement('label');
+            label.className = 'checkbox-item';
+            label.innerHTML = `
+                <input type="checkbox" value="${m}" checked onchange="applyFilters()">
+                <span>${m}</span>
+            `;
+            container.appendChild(label);
+        });
+    }
+
+    function toggleAccordion(id) {
+        const content = document.getElementById(id);
+        const header = content.previousElementSibling;
+        const icon = header.querySelector('i');
+
+        content.classList.toggle('open');
+        if (content.classList.contains('open')) {
+            icon.style.transform = 'rotate(180deg)';
+        } else {
+            icon.style.transform = 'rotate(0deg)';
+        }
+    }
+
+    function toggleAllMachines(checked) {
+        const checkboxes = document.querySelectorAll('#machineCheckboxes input[type="checkbox"]');
+        checkboxes.forEach(cb => cb.checked = checked);
+        applyFilters();
+    }
+
+    function applyFilters() {
+        // Obtener máquinas seleccionadas
+        const checkedMachines = Array.from(document.querySelectorAll('#machineCheckboxes input[type="checkbox"]:checked'))
+            .map(cb => cb.value);
+
+        const search = document.getElementById('pieceSearch').value.toLowerCase();
+
+        let filtered = [...planningData];
+
+        // Filtrar por máquinas (si hay alguna seleccionada)
+        if (checkedMachines.length === 0) {
+            filtered = []; // O mostrar nada si no hay máquinas seleccionadas
+        } else {
+            filtered = filtered.filter(d => checkedMachines.includes(d.maquina));
+        }
+
+        if (search) {
+            filtered = filtered.filter(d =>
+                (d.partida && d.partida.toLowerCase().includes(search)) ||
+                (d.nombre_pieza && d.nombre_pieza.toLowerCase().includes(search)) ||
+                (d.n && d.n.toLowerCase().includes(search))
+            );
+        }
+
+        renderPlotlyTimeline(filtered);
+    }
+
+    function toggleFullScreen() {
+        const container = document.querySelector('.planning-container');
+        if (!document.fullscreenElement) {
+            container.requestFullscreen().catch(err => {
+                console.error(`Error attempting to enable full-screen mode: ${err.message}`);
+            });
+        } else {
+            document.exitFullscreen();
+        }
+    }
+
+    // Ajustar Plotly cuando cambia el tamaño o pantalla completa
+    window.onresize = function () {
+        Plotly.Plots.resize('plotly-chart');
+    };
+
+    document.addEventListener('fullscreenchange', () => {
+        const container = document.querySelector('.planning-container');
+        const chart = document.getElementById('plotly-chart');
+        if (document.fullscreenElement) {
+            container.style.height = '100vh';
+            container.style.borderRadius = '0';
+        } else {
+            container.style.height = 'calc(100vh - 200px)';
+            container.style.borderRadius = '20px';
+        }
+        Plotly.Plots.resize('plotly-chart');
+    });
+
+    // Inicializar
+    fetchPlanningData();
+</script>
+{% endblock %}
