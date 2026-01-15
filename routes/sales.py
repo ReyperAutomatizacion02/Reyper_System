@@ -2,6 +2,7 @@ import os
 import requests
 import threading
 import time
+import logging
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
 from flask import Blueprint, render_template, session, redirect, url_for, flash, request, jsonify
@@ -9,6 +10,9 @@ from flask_login import login_required, current_user
 from constants import get_allowed_modules
 
 sales_bp = Blueprint('sales', __name__, url_prefix='/dashboard/ventas')
+
+# Logger del módulo
+logger = logging.getLogger(__name__)
 
 # Caché en memoria para Ventas
 CLIENTES_CACHE = {'data': [], 'timestamp': None, 'is_syncing': False}
@@ -83,7 +87,7 @@ def fetch_notion_db(token, db_id, property_name):
             else:
                 break
         except Exception as e:
-            print(f"Error fetching Notion DB {db_id}: {e}")
+            logger.error(f"Error fetching Notion DB {db_id}: {e}")
             break
             
     return sorted(list(set(results_list)))
@@ -112,40 +116,41 @@ def refresh_sales_cache(force=False):
         db_usuarios = os.getenv('NOTION_DATABASE_ID_USUARIOS')
         db_cotizaciones = os.getenv('NOTION_DATABASE_ID_COTIZACIONES')
         
-        if token:
-            tasks = []
-            if db_clientes:
-                tasks.append(('clientes', (token, db_clientes, "RAZON SOCIAL")))
-            if db_usuarios:
-                tasks.append(('usuarios', (token, db_usuarios, "NOMBRE COMPLETO")))
-            if db_cotizaciones:
-                tasks.append(('puestos', (token, db_cotizaciones, "PUESTO")))
-                tasks.append(('areas', (token, db_cotizaciones, "AREA")))
+        logger.info(f"Iniciando sincronización paralela de Ventas... (Force={force})")
+        tasks = []
+        if db_clientes:
+            tasks.append(('clientes', (token, db_clientes, "RAZON SOCIAL")))
+        if db_usuarios:
+            tasks.append(('usuarios', (token, db_usuarios, "NOMBRE COMPLETO")))
+        if db_cotizaciones:
+            tasks.append(('puestos', (token, db_cotizaciones, "PUESTO")))
+            tasks.append(('areas', (token, db_cotizaciones, "AREA")))
 
-            with ThreadPoolExecutor(max_workers=min(len(tasks), 4)) as executor:
-                future_to_key = {executor.submit(fetch_notion_db_wrapper, args): key for key, args in tasks}
-                for future in future_to_key:
-                    key = future_to_key[future]
-                    try:
-                        data = future.result()
-                        now = datetime.now()
-                        if key == 'clientes':
-                            CLIENTES_CACHE['data'] = data
-                            CLIENTES_CACHE['timestamp'] = now
-                        elif key == 'usuarios':
-                            USUARIOS_CACHE['data'] = data
-                            USUARIOS_CACHE['timestamp'] = now
-                        elif key == 'puestos':
-                            PUESTOS_CACHE['data'] = data
-                            PUESTOS_CACHE['timestamp'] = now
-                        elif key == 'areas':
-                            AREAS_CACHE['data'] = data
-                            AREAS_CACHE['timestamp'] = now
-                    except Exception as e:
-                        print(f"Error sincronizando {key}: {e}")
+        with ThreadPoolExecutor(max_workers=min(len(tasks), 4)) as executor:
+            future_to_key = {executor.submit(fetch_notion_db_wrapper, args): key for key, args in tasks}
+            for future in future_to_key:
+                key = future_to_key[future]
+                try:
+                    data = future.result()
+                    now = datetime.now()
+                    if key == 'clientes':
+                        CLIENTES_CACHE['data'] = data
+                        CLIENTES_CACHE['timestamp'] = now
+                    elif key == 'usuarios':
+                        USUARIOS_CACHE['data'] = data
+                        USUARIOS_CACHE['timestamp'] = now
+                    elif key == 'puestos':
+                        PUESTOS_CACHE['data'] = data
+                        PUESTOS_CACHE['timestamp'] = now
+                    elif key == 'areas':
+                        AREAS_CACHE['data'] = data
+                        AREAS_CACHE['timestamp'] = now
+                    logger.info(f"{key.capitalize()} sincronizados ({len(data)})")
+                except Exception as e:
+                    logger.error(f"Error sincronizando {key}: {e}")
                 
     except Exception as e:
-        print(f"Error en refresh_sales_cache: {e}")
+        logger.exception(f"Error en refresh_sales_cache: {e}")
     finally:
         for cache in [CLIENTES_CACHE, USUARIOS_CACHE, PUESTOS_CACHE, AREAS_CACHE]:
             cache['is_syncing'] = False
@@ -158,7 +163,7 @@ def start_sales_sync():
             now = datetime.now()
             # Si son las 6 AM (o pasadas las 6 y no hemos sincronizado hoy)
             if now.hour == 6 and last_sync_date != now.date():
-                print(f"DEBUG: Sincronización programada de las 6 AM iniciada.")
+                logger.info("Sincronización programada de las 6 AM iniciada.")
                 refresh_sales_cache()
                 last_sync_date = now.date()
             

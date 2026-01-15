@@ -4,10 +4,14 @@ import os
 import requests
 import threading
 import time
+import logging
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
 
 logistics_bp = Blueprint('logistics', __name__, url_prefix='/dashboard/logistica')
+
+# Logger del módulo
+logger = logging.getLogger(__name__)
 
 # Herramientas del Módulo de Logística
 LOGISTICS_TOOLS = [
@@ -159,8 +163,10 @@ def refresh_notion_cache():
         MATERIALES_CACHE['data'] = materiales
         MATERIALES_CACHE['timestamp'] = now
         
+        logger.info(f"Sincronización paralela de Logística completada. Partidas: {len(partidas)}, Materiales: {len(materiales)}")
+        
     except Exception as e:
-        print(f"ERROR en sincronización de Notion: {str(e)}")
+        logger.exception(f"ERROR en sincronización de Notion: {str(e)}")
     finally:
         PARTIDAS_CACHE['is_syncing'] = False
         MATERIALES_CACHE['is_syncing'] = False
@@ -257,12 +263,12 @@ def submit_capture():
 
         # Enviar a n8n
         response = requests.post(webhook_url, json=data, timeout=15)
-        print(f"DEBUG: Webhook response status: {response.status_code}")
+        logger.info(f"Webhook response status: {response.status_code}")
         
         if response.ok: # Acepta cualquier 2xx
             return jsonify({'success': True, 'message': 'Materiales registrados exitosamente'})
         else:
-            print(f"DEBUG: Webhook error body: {response.text}")
+            logger.error(f"Webhook error body: {response.text}")
             return jsonify({'success': False, 'message': f'Error en el servidor de destino (Status: {response.status_code}): {response.text[:100]}'}), 500
             
     except Exception as e:

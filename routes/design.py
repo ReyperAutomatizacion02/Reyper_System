@@ -2,12 +2,16 @@ import os
 import requests
 import threading
 import time
+import logging
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from flask import Blueprint, render_template, session, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
 
 design_bp = Blueprint('design', __name__, url_prefix='/dashboard/diseno')
+
+# Logger del módulo
+logger = logging.getLogger(__name__)
 
 # Import partidas cache from logistics module
 from routes.logistics import PARTIDAS_CACHE
@@ -69,7 +73,7 @@ def refresh_inventory_cache():
         database_id = os.getenv('NOTION_DATABASE_ID_INVENTARIO')
         
         if not token or not database_id:
-            print("DEBUG: Falta token o ID de inventario en .env")
+            logger.warning("Falta token o ID de inventario en .env")
             INVENTARIO_CACHE['is_syncing'] = False
             return
 
@@ -108,16 +112,16 @@ def refresh_inventory_cache():
                 has_more = data.get('has_more', False)
                 next_cursor = data.get('next_cursor')
             else:
-                print(f"DEBUG: Error API Notion Inventario: {response.text}")
+                logger.error(f"Error API Notion Inventario: {response.text}")
                 break
         
         new_items = sorted(list(set(new_items))) # Eliminar duplicados y ordenar
         INVENTARIO_CACHE['data'] = new_items
         INVENTARIO_CACHE['timestamp'] = datetime.now()
-        print(f"DEBUG: Sincronización de INVENTARIO completada. {len(new_items)} registros obtenidos.")
+        logger.info(f"Sincronización de INVENTARIO completada. {len(new_items)} registros obtenidos.")
         
     except Exception as e:
-        print(f"ERROR en sincronización de Inventario: {str(e)}")
+        logger.exception(f"ERROR en sincronización de Inventario: {str(e)}")
     finally:
         INVENTARIO_CACHE['is_syncing'] = False
 
@@ -134,7 +138,7 @@ def refresh_projects_cache():
         database_id = os.getenv('NOTION_DATABASE_ID_PROYECTOS')
         
         if not token or not database_id:
-            print("DEBUG: Falta token o ID de proyectos en .env")
+            logger.warning("Falta token o ID de proyectos en .env")
             PROYECTOS_CACHE['is_syncing'] = False
             return
 
@@ -254,19 +258,19 @@ def refresh_projects_cache():
                 has_more = data.get('has_more', False)
                 next_cursor = data.get('next_cursor')
             else:
-                print(f"DEBUG: Error API Notion Proyectos: {response.text}")
+                logger.error(f"Error API Notion Proyectos: {response.text}")
                 break
         
         # Success path: save data
         PROYECTOS_CACHE['data'] = new_projects
         PROYECTOS_CACHE['timestamp'] = datetime.now()
-        print(f"DEBUG: Sincronización de PROYECTOS completada. {len(new_projects)} proyectos con 'pendientes' obtenidos.")
+        logger.info(f"Sincronización de PROYECTOS completada. {len(new_projects)} proyectos con 'pendientes' obtenidos.")
         
     except Exception as e:
-        print(f"ERROR en sincronización de Proyectos: {str(e)}")
+        logger.exception(f"ERROR en sincronización de Proyectos: {str(e)}")
         # Partial save on error
         if new_projects:
-             print(f"DEBUG: GUARDANDO PARCIALMENTE: {len(new_projects)} proyectos obtenidos antes del error.")
+             logger.info(f"GUARDANDO PARCIALMENTE: {len(new_projects)} proyectos obtenidos antes del error.")
              PROYECTOS_CACHE['data'] = new_projects
              PROYECTOS_CACHE['timestamp'] = datetime.now()
     finally:
@@ -287,7 +291,7 @@ def start_inventory_scheduler():
                 target += timedelta(days=1)
             
             sleep_seconds = (target - now).total_seconds()
-            print(f"DEBUG: Próxima sincronización en {sleep_seconds/3600:.2f} horas (a las 07:00 AM)")
+            logger.info(f"Próxima sincronización en {sleep_seconds/3600:.2f} horas (a las 07:00 AM)")
             time.sleep(sleep_seconds)
             refresh_inventory_cache()
             refresh_projects_cache()
@@ -316,7 +320,7 @@ def get_proyectos():
             'is_syncing': PROYECTOS_CACHE['is_syncing']
         })
     except Exception as e:
-        print(f"ERROR in get_proyectos: {str(e)}")
+        logger.error(f"ERROR in get_proyectos: {str(e)}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
 @design_bp.route('/api/partidas', methods=['GET'])
@@ -367,8 +371,6 @@ def submit_accessories():
         if not webhook_url:
             webhook_url = os.getenv('N8N_WEBHOOK_URL_DISENO') or os.getenv('N8N_WEBHOOK_URL')
 
-        print(f"DEBUG: Intentando enviar a Webhook: {webhook_url}")
-
         if not webhook_url:
             return jsonify({'success': False, 'message': 'URL de Webhook (ACCESORIOS_WEBHOOK_URL) no configurada en .env'}), 500
 
@@ -381,11 +383,11 @@ def submit_accessories():
             'timestamp': datetime.now().isoformat()
         }
 
-        print(f"DEBUG: Payload enviado: {data}")
+        logger.info(f"Payload enviado: {data}")
 
         response = requests.post(webhook_url, json=data, timeout=15)
         
-        print(f"DEBUG: Respuesta Webhook - Status: {response.status_code}, Body: {response.text}")
+        logger.info(f"Respuesta Webhook - Status: {response.status_code}, Body: {response.text}")
 
         if response.ok:
             return jsonify({'success': True, 'message': 'Solicitud enviada exitosamente'})
@@ -397,7 +399,5 @@ def submit_accessories():
             }), 500
             
     except Exception as e:
-        import traceback
-        print(f"ERROR en submit_accessories: {str(e)}")
-        print(traceback.format_exc())
+        logger.exception(f"ERROR en submit_accessories: {str(e)}")
         return jsonify({'success': False, 'message': f'Error interno: {str(e)}'}), 500

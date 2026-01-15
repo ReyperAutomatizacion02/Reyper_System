@@ -1,6 +1,16 @@
 import os
+import logging
 from dotenv import load_dotenv
 from flask import Flask
+
+# Configuración de logging profesional
+logging.basicConfig(
+    level=logging.INFO,
+    format='[%(asctime)s] %(levelname)s in %(module)s: %(message)s',
+    handlers=[logging.StreamHandler()]
+)
+logger = logging.getLogger(__name__)
+
 from routes.auth import auth_bp
 from routes.main import main_bp
 from routes.sales import sales_bp
